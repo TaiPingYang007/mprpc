@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package fixbug;
+
+option cc_generic_services = true;
+
+message ResultCode
+{
+    int32 errcode = 1;
+    bytes errormasg = 2;
+}
+
+message LoginRequest
+{
+    bytes name = 1;
+    bytes pwd = 2;
+}
+
+message LoginResponse
+{
+    ResultCode result = 1;
+    bool sucess = 2;
+}
+
+// 在protobuf里面怎么定义描述rpc方法的类型 - service
+service UserServiceRpc  // service 服务类型
+{
+    // login
+    rpc Login(LoginRequest) returns (LoginResponse);
+}
