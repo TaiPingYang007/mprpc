@@ -25,7 +25,7 @@ void MprpcApplication::Init(int argc, char **argv) {
   while ((c = getopt(argc, argv, "i:")) != -1) {
     switch (c) {
     case 'i':
-      config_file = optarg; // optarg：这是系统自带的一个全局指针！当 getopt
+      config_file = optarg; // optarg：这是getopt自带的一个全局指针！当 getopt
                             // 看到 -i test.conf 时，它不仅返回 'i'，还会偷偷把
                             // "test.conf" 的地址塞进 optarg 这个全局变量里。
       break;
@@ -45,14 +45,14 @@ void MprpcApplication::Init(int argc, char **argv) {
   // 开始加载配置文件   rpcserver_ip = rpcserver_port = zookeeper_ip =
   // zookeeper_port =
   m_config.LoadConfigfile(config_file.c_str());
-
-  std::cout << "rpcserverip:" << m_config.Load("rpcserverip") << std::endl;
-  std::cout << "rpcserverprot:" << m_config.Load("rpcserverprot") << std::endl;
-  std::cout << "zookeeperip:" << m_config.Load("zookeeperip") << std::endl;
-  std::cout << "zookeeperprot:" << m_config.Load("zookeeperprot") << std::endl;
 }
 // 类外实现无需static参数
 MprpcApplication &MprpcApplication::GetInstance() {
   static MprpcApplication app;
   return app;
+}
+
+MprpcConfig &MprpcApplication::GetConfig()
+{
+   return m_config; 
 }

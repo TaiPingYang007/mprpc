@@ -8,6 +8,7 @@ public:
 
   static MprpcApplication &GetInstance();
 
+  static MprpcConfig &GetConfig();
 private:
   static MprpcConfig m_config; // 普通的静态成员变量不能访问静态成员函数
 
