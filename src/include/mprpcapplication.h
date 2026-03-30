@@ -9,8 +9,9 @@ public:
   static MprpcApplication &GetInstance();
 
   static MprpcConfig &GetConfig();
+
 private:
-  static MprpcConfig m_config; // 普通的静态成员变量不能访问静态成员函数
+  static MprpcConfig m_config; // 静态成员函数，不能访问普通的成员变量
 
   MprpcApplication();
   MprpcApplication(const MprpcApplication &) = delete;

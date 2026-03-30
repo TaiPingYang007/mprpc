@@ -42,17 +42,15 @@ void MprpcApplication::Init(int argc, char **argv) {
     }
   }
 
-  // 开始加载配置文件   rpcserver_ip = rpcserver_port = zookeeper_ip =
+  // 开始加载配置文件 rpcserver_ip = rpcserver_port = zookeeper_ip =
   // zookeeper_port =
   m_config.LoadConfigfile(config_file.c_str());
 }
+
 // 类外实现无需static参数
 MprpcApplication &MprpcApplication::GetInstance() {
   static MprpcApplication app;
   return app;
 }
 
-MprpcConfig &MprpcApplication::GetConfig()
-{
-   return m_config; 
-}
+MprpcConfig &MprpcApplication::GetConfig() { return m_config; }

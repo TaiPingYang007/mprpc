@@ -1,5 +1,6 @@
 #pragma once
 #include "google/protobuf/service.h"
+#include <memory>
 #include <mymuduo/EventLoop.h>
 #include <mymuduo/InetAddress.h>
 #include <mymuduo/TcpConnection.h>
@@ -18,6 +19,8 @@ public:
   void Run();
 
 private:
+  // 组合了TcpServer
+  std::unique_ptr<TcpServer> m_tcpserverPtr;
   // 组合EventLoop
   EventLoop m_eventLoop;
 
@@ -36,4 +39,7 @@ private:
   void onConnection(const TcpConnectionPtr &conn);
   // 新的socket消息回调
   void onMessage(const TcpConnectionPtr &conn, Buffer *buffer, Timestamp time);
+  // Closure回调操作，用于序列化rpc的响应和网络发送
+  void SendRpcResponse(const TcpConnectionPtr &conn,
+                       google::protobuf::Message *response);
 };

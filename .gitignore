@@ -13,3 +13,9 @@ bin/
 .vscode/
 
 # 4. Protobuf 自动生成的 C++ 代码（可选：一般大厂不上传生成代码，只传 .proto 图纸，但为了你复习方便，这几行我先不写，允许你上传）
+
+# 忽略 clangd 缓存
+.cache/
+
+# 忽略 VS Code 自身配置（顺手加上）
+.vscode/

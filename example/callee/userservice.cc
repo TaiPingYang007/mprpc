@@ -27,7 +27,7 @@ public:
              ::fixbug::LoginResponse *response,
              ::google::protobuf::Closure *done) {
     // 框架给业务上报了请求参数
-    // LoginRequest，应用获取相应数据做本地业务（此时已经反序列化过了？？）
+    // LoginRequest，应用获取相应数据做本地业务
     std::string name = request->name();
     std::string pwd = request->pwd();
 
