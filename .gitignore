@@ -1,19 +1,20 @@
-# 1. 忽略 CMake 和 Make 产生的海量中间文件
+# 1. 忽略所有编译产物和临时文件
 /build/
-
-# 2. 忽略所有编译出来的库文件和二进制临时文件
+/lib/
 *.o
 *.a
 *.so
-/lib/
+a.out
 
-# 3. 忽略 example 产生的可执行文件和日志
-/bin/consumer
-/bin/provider
+# 2. 忽略运行时产生的可执行文件和日志
+# 忽略 bin 目录下的一切，但保留 test.conf
+/bin/*
+!/bin/test.conf
 *.log
 *.txt
-!test.conf  # 但是 test.conf 配置文件我们要保留传上去
+!CMakeLists.txt
 
-# 4. 忽略编辑器产生的缓存文件
+# 3. 忽略 IDE 和环境生成的本地缓存文件
+.cache/
 compile_commands.json
 .vscode/
