@@ -1,10 +1,10 @@
-#include "../../src/include/mprpcapplication.h"
-#include "../../src/include/rpcprovider.h"
 #include "../user.pb.h"
+#include "mprpcapplication.h"
 #include <iostream>
 #include <string>
+
 /*
-UserService 原来是一个本地服务，提供了两个进程的本地方法，Login和GetFriendList
+  UserService 原来是一个本地服务，提供了两个进程的本地方法，Login和GetFriendList
 */
 
 class UserService : public fixbug::UserServiceRpc // 使用在rpc服务提供者
@@ -14,6 +14,12 @@ public:
     std::cout << "doing local service :Login\n";
     std::cout << "name:" << name << "password:" << pwd << "\n";
 
+    return true;
+  }
+
+  bool Register(uint32_t id, std::string name, std::string pwd) {
+    std::cout << "doing local service :Register\n";
+    std::cout << "id:" << id << "name:" << name << "password:" << pwd << "\n";
     return true;
   }
 
@@ -41,6 +47,28 @@ public:
     response->set_sucess(login_request);
 
     // 执行回调操作
+    done->Run();
+  }
+
+  void Register(::google::protobuf::RpcController *controller,
+                const ::fixbug::RegisterRequest *request,
+                ::fixbug::RegisterResponse *response,
+                ::google::protobuf::Closure *done) {
+    // 框架给业务上报了请求参数
+    // LoginRequest，应用获取相应数据做本地业务
+    uint32_t id = request->id();
+    std::string name = request->name();
+    std::string pwd = request->pwd();
+
+    // 做本地业务
+    bool ret = Register(id, name, pwd);
+
+    // 把执行结果返回response
+    response->mutable_result()->set_errcode(0);
+    response->mutable_result()->set_errormasg("");
+    response->set_sucess(ret);
+
+    // 执行回调
     done->Run();
   }
 };

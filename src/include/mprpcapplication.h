@@ -1,5 +1,9 @@
 #pragma once
-#include "mprpcconfig.h"
+#include "./logger.h"
+#include "./mprpcchannel.h"
+#include "./mprpcconfig.h"
+#include "./mprpccontroller.h"
+#include "./rpcprovider.h"
 
 // mprpac框架的基础类，负责框架的初始化和销毁
 class MprpcApplication {

@@ -27,6 +27,9 @@ void RpcProvider::NotifyService(google::protobuf::Service *service) {
 
   // 获取服务的名字
   std::string service_name = pserviceDesc->name();
+
+  std::cout << "service_name:" << service_name << std::endl;
+
   // 获取服务对象的方法的数量
   int method_count = pserviceDesc->method_count();
 
@@ -37,6 +40,8 @@ void RpcProvider::NotifyService(google::protobuf::Service *service) {
 
     // 获取服务方法的名字
     std::string method_name = pmethodDesc->name();
+
+    std::cout << "method_name:" << method_name << std::endl;
 
     service_info.m_methodMap.insert(
         {method_name, pmethodDesc}); // 方法名字＋方法描述
