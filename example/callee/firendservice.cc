@@ -4,8 +4,9 @@
 #include <vector>
 
 #include "../friend.pb.h"
+#include "logger.h"
 #include "mprpcapplication.h"
-#include "rpcprovider.h"
+#include "mprpcprovider.h"
 
 // 定义User结构体
 struct User {

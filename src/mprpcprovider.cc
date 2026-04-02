@@ -1,10 +1,10 @@
-#include "./include/rpcprovider.h"
+#include "./include/mprpcprovider.h"
 #include "./include/mprpcapplication.h"
+#include "./include/zookeeperutil.h"
 #include "rpcherder.pb.h"
 #include <google/protobuf/descriptor.h>
 #include <google/protobuf/service.h>
 #include <google/protobuf/stubs/callback.h>
-#include <memory>
 #include <mymuduo/TcpServer.h>
 
 /**
@@ -77,6 +77,33 @@ void RpcProvider::Run() {
 
   // 设置muduo库的线程数量
   m_tcpserverPtr->setThreadNum(4);
+
+  // 把当前rpc节点上要发布的的服务全部注册到zkserver上面，让rpc
+  // client可以从zkserver上发现rpc server节点的服务信息
+  // session timeout 30s zkclient和zkserver之间的心跳检测时间间隔10s zkclient和zkserver之间的连接断开后zkserver删除zkclient创建的临时节点
+  // zkclient 网络I/O线程 1/3*timeout 时间发送ping消息
+  ZkClient zkclient;
+  zkclient.Start();
+  // service_name 为永久性节点，method_name为临时性节点
+  for (auto &sp : m_serviceInfoMap) {
+    // /service_name  /UserService
+    std::string service_path = "/" + sp.first;
+    // 创建service_name的永久性节点
+    zkclient.Create(service_path.c_str(), nullptr, 0);
+    for (auto &mp : sp.second.m_methodMap) {
+      // /service_name/method_name  /userService/Login
+      // 存储当前这个rpc服务节点主机的ip和port
+      std::string method_path = service_path + "/" + mp.first;
+      // 创建method_name的临时性节点，节点值为rpc server的ip和端口号
+      char method_path_data[128] = {0};
+      snprintf(method_path_data, sizeof(method_path_data), "%s:%d", ip.c_str(),
+               port);
+      zkclient.Create(method_path.c_str(), method_path_data,
+                      strlen(method_path_data),
+                      ZOO_EPHEMERAL); // ZOO_EPHEMERAL表示临时节点，rpc
+                                      // server断开连接后这个节点就会自动删除
+    }
+  }
 
   std ::cout << "RpcProvider start service at ip:" << ip << " port:" << port
              << std ::endl;

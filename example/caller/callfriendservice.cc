@@ -1,5 +1,7 @@
 #include "../friend.pb.h"
 #include "mprpcapplication.h"
+#include "mprpcchannel.h"
+#include "mprpccontroller.h"
 
 int main(int argc, char **argv) {
   // rpc框架初始化
@@ -26,7 +28,7 @@ int main(int argc, char **argv) {
     // 调用成功，并不是业务逻辑成功
     if (response.result().errcode() == 0) {
       // 业务逻辑执行成功
-      std::cout << "rpc GetFriendList success :" << std::endl;
+      std::cout << "rpc GetFriendList success !" << std::endl;
       for (int i = 0; i < response.friend_list_size(); i++) {
         std::cout << "userid:" << response.friend_list(i).userid() << " "
                   << "name:" << response.friend_list(i).name() << std::endl;

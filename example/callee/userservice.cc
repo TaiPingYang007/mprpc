@@ -1,5 +1,6 @@
 #include "../user.pb.h"
 #include "mprpcapplication.h"
+#include "mprpcprovider.h"
 #include <iostream>
 #include <string>
 

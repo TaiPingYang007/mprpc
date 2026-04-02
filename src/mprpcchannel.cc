@@ -1,11 +1,10 @@
 #include "./include/mprpcchannel.h"
-#include "./include/mprpcapplication.h"
 #include "rpcherder.pb.h"
+#include "zookeeperutil.h"
 #include <arpa/inet.h>
-#include <cstdlib>
-#include <error.h>
+#include <cassert>
+#include <cstring>
 #include <google/protobuf/descriptor.h>
-#include <netinet/in.h>
 #include <string>
 #include <sys/socket.h>
 #include <unistd.h>
@@ -104,13 +103,30 @@ void MprpcChannel::CallMethod(const google::protobuf::MethodDescriptor *method,
   SocketFdGuard guard(clientfd);
 
   // 获取rpc服务提供者的ip地址
-  std::string ip =
-      MprpcApplication::GetInstance().GetConfig().Load("rpcserverip");
+  // std::string ip =
+  // MprpcApplication::GetInstance().GetConfig().Load("rpcserverip");
   // 获取rpc服务提供者的端口号 port
-  uint16_t port = std::stoi(MprpcApplication::GetInstance()
-                                .GetConfig()
-                                .Load("rpcserverport")
-                                .c_str());
+  // uint16_t port =
+  // std::stoi(MprpcApplication::GetInstance().GetConfig().Load("rpcserverport").c_str());
+  ZkClient zkclient;
+  zkclient.Start();
+  // /UserServiceRpc/Login
+  std::string method_path = "/" + service_name + "/" + method_name;
+  // 127.0.0.1:8000
+  std::string host_data = zkclient.GetData(method_path.c_str());
+  if (host_data == "") {
+    std::string err_info = "get host data from zookeeper error! path: " + method_path;
+    controller->SetFailed(err_info);
+    return;
+  }
+  int idx = host_data.find(":");
+  if (idx == -1) {
+    std::string err_info = "invalid host data from zookeeper! path: " + method_path + " data: " + host_data;
+    controller->SetFailed(err_info);
+    return;
+  }
+  std::string ip = host_data.substr(0, idx);
+  uint16_t port = std::stoi(host_data.substr(idx + 1));
 
   struct sockaddr_in server_addr;
   server_addr.sin_family = AF_INET;

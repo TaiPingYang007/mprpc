@@ -1,21 +1,19 @@
-# 1. 编译输出的二进制和中间文件
-build/
-bin/
+# 1. 忽略 CMake 和 Make 产生的海量中间文件
+/build/
+
+# 2. 忽略所有编译出来的库文件和二进制临时文件
 *.o
-*.out
-*.so
 *.a
+*.so
+/lib/
 
-# 2. 临时文件和日志
+# 3. 忽略 example 产生的可执行文件和日志
+/bin/consumer
+/bin/provider
 *.log
+*.txt
+!test.conf  # 但是 test.conf 配置文件我们要保留传上去
 
-# 3. VS Code 个人本地配置（每个人电脑配置不同，不建议上传）
-.vscode/
-
-# 4. Protobuf 自动生成的 C++ 代码（可选：一般大厂不上传生成代码，只传 .proto 图纸，但为了你复习方便，这几行我先不写，允许你上传）
-
-# 忽略 clangd 缓存
-.cache/
-
-# 忽略 VS Code 自身配置（顺手加上）
+# 4. 忽略编辑器产生的缓存文件
+compile_commands.json
 .vscode/

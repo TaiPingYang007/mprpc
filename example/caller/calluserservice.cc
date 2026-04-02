@@ -1,5 +1,5 @@
-#include "../../src/include/mprpcapplication.h"
-#include "../../src/include/mprpcchannel.h"
+#include "mprpcapplication.h"
+#include "mprpcchannel.h"
 #include "../user.pb.h"
 #include <iostream>
 
