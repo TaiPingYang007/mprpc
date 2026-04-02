@@ -1,5 +1,6 @@
 #include "mprpcapplication.h"
 #include "mprpcchannel.h"
+#include "mprpccontroller.h"
 #include "../user.pb.h"
 #include <iostream>
 
@@ -16,13 +17,17 @@ int main(int argc, char **argv) {
   request.set_pwd("123456");
   // rpc方法的响应
   fixbug::LoginResponse response;
+  MprpcController login_controller;
   // 发起rpc方法的调用 同步rpc调用过程
-  stub.Login(nullptr, &request, &response,
+  stub.Login(&login_controller, &request, &response,
              nullptr); // RpcChannel->RpcChannel::CallMethod
   // 集中来做所有rpc方法调用的参数序列化和网络发送
 
   // 一次rpc调用完成，读调用结果
-  if (response.result().errcode() == 0) {
+  if (login_controller.Failed()) {
+    std::cout << "rpc login response error：" << login_controller.ErrorText()
+              << std::endl;
+  } else if (response.result().errcode() == 0) {
     // 调用成功
     std::cout << "rpc login response success：" << response.sucess()
               << std::endl;
@@ -38,9 +43,13 @@ int main(int argc, char **argv) {
   request01.set_pwd("123456");
 
   fixbug::RegisterResponse response01;
-  stub.Register(nullptr, &request01, &response01, nullptr);
+  MprpcController register_controller;
+  stub.Register(&register_controller, &request01, &response01, nullptr);
 
-  if (response01.sucess()) {
+  if (register_controller.Failed()) {
+    std::cout << "rpc register response error:"
+              << register_controller.ErrorText() << std::endl;
+  } else if (response01.sucess()) {
     std::cout << "rpc register response success:" << response01.sucess()
               << std::endl;
   } else {
