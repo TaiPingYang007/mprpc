@@ -11,14 +11,15 @@
 class UserService : public fixbug::UserServiceRpc // 使用在rpc服务提供者
 {
 public:
-  bool Login(std::string name, std::string pwd) {
+  bool LoginLocal(const std::string &name, const std::string &pwd) {
     std::cout << "doing local service :Login\n";
     std::cout << "name:" << name << "password:" << pwd << "\n";
 
     return true;
   }
 
-  bool Register(uint32_t id, std::string name, std::string pwd) {
+  bool RegisterLocal(uint32_t id, const std::string &name,
+                     const std::string &pwd) {
     std::cout << "doing local service :Register\n";
     std::cout << "id:" << id << "name:" << name << "password:" << pwd << "\n";
     return true;
@@ -32,45 +33,51 @@ public:
   void Login(::google::protobuf::RpcController *controller,
              const ::fixbug::LoginRequest *request,
              ::fixbug::LoginResponse *response,
-             ::google::protobuf::Closure *done) {
+             ::google::protobuf::Closure *done) override {
+    (void)controller;
     // 框架给业务上报了请求参数
     // LoginRequest，应用获取相应数据做本地业务
-    std::string name = request->name();
-    std::string pwd = request->pwd();
+    const std::string name = request->name();
+    const std::string pwd = request->pwd();
 
     // 做本地业务
-    bool login_request = Login(name, pwd);
+    const bool loginSuccess = LoginLocal(name, pwd);
 
     //   把响应写入LoginResponse 包括错误码、错误消息、返回值
-    fixbug::ResultCode *code = response->mutable_result();
-    code->set_errcode(0);
-    code->set_errormasg("");
-    response->set_sucess(login_request);
+    fixbug::ResultCode *result = response->mutable_result();
+    result->set_errcode(0);
+    result->set_errormasg("");
+    response->set_sucess(loginSuccess);
 
     // 执行回调操作
-    done->Run();
+    if (done != nullptr) {
+      done->Run();
+    }
   }
 
   void Register(::google::protobuf::RpcController *controller,
                 const ::fixbug::RegisterRequest *request,
                 ::fixbug::RegisterResponse *response,
-                ::google::protobuf::Closure *done) {
+                ::google::protobuf::Closure *done) override {
+    (void)controller;
     // 框架给业务上报了请求参数
     // LoginRequest，应用获取相应数据做本地业务
-    uint32_t id = request->id();
-    std::string name = request->name();
-    std::string pwd = request->pwd();
+    const uint32_t id = request->id();
+    const std::string name = request->name();
+    const std::string pwd = request->pwd();
 
     // 做本地业务
-    bool ret = Register(id, name, pwd);
+    const bool registerSuccess = RegisterLocal(id, name, pwd);
 
     // 把执行结果返回response
     response->mutable_result()->set_errcode(0);
     response->mutable_result()->set_errormasg("");
-    response->set_sucess(ret);
+    response->set_sucess(registerSuccess);
 
     // 执行回调
-    done->Run();
+    if (done != nullptr) {
+      done->Run();
+    }
   }
 };
 
@@ -80,7 +87,7 @@ int main(int argc, char **argv) {
 
   // provider是一个rpc网络服务对象 把UserService对象发布到rpc节点上
   RpcProvider provider;
-  provider.NotifyService(new UserService);
+  provider.NotifyService(new UserService());
 
   // 启动一个rpc服务发布节点 Run以后，进入阻塞状态，等待远程的rpc调用请求
   provider.Run();

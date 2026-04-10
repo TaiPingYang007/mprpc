@@ -21,22 +21,22 @@ int main(int argc, char **argv) {
 
   // 先判断controller，判断这次调用是否成功
   if (controller.Failed()) {
-    // 失败
     std::cout << "rpc GetFriendList error :" << controller.ErrorText()
               << std::endl;
-  } else {
-    // 调用成功，并不是业务逻辑成功
-    if (response.result().errcode() == 0) {
-      // 业务逻辑执行成功
-      std::cout << "rpc GetFriendList success !" << std::endl;
-      for (int i = 0; i < response.friend_list_size(); i++) {
-        std::cout << "userid:" << response.friend_list(i).userid() << " "
-                  << "name:" << response.friend_list(i).name() << std::endl;
-      }
-    } else {
-      std::cout << "rpc GetFriendList error :" << controller.ErrorText()
-                << std::endl;
-    }
+    return 1;
   }
+
+  if (response.result().errcode() != 0) {
+    std::cout << "rpc GetFriendList error :" << response.result().errmsg()
+              << std::endl;
+    return 1;
+  }
+
+  std::cout << "rpc GetFriendList success !" << std::endl;
+  for (int i = 0; i < response.friend_list_size(); ++i) {
+    std::cout << "userid:" << response.friend_list(i).userid() << " "
+              << "name:" << response.friend_list(i).name() << std::endl;
+  }
+
   return 0;
 }

@@ -27,35 +27,43 @@ int main(int argc, char **argv) {
   if (login_controller.Failed()) {
     std::cout << "rpc login response error：" << login_controller.ErrorText()
               << std::endl;
-  } else if (response.result().errcode() == 0) {
-    // 调用成功
-    std::cout << "rpc login response success：" << response.sucess()
-              << std::endl;
-  } else {
-    std::cout << "rpc login response error：" << response.result().errormasg()
-              << std::endl;
+    return 1;
   }
 
-  //  演示调用远程发布的rpc方法Register
-  fixbug::RegisterRequest request01;
-  request01.set_id(01);
-  request01.set_name("li si");
-  request01.set_pwd("123456");
+  if (response.result().errcode() != 0) {
+    std::cout << "rpc login response error：" << response.result().errormasg()
+              << std::endl;
+    return 1;
+  }
 
-  fixbug::RegisterResponse response01;
+  std::cout << "rpc login response success：" << response.sucess()
+            << std::endl;
+
+  //  演示调用远程发布的rpc方法Register
+  fixbug::RegisterRequest registerRequest;
+  registerRequest.set_id(1);
+  registerRequest.set_name("li si");
+  registerRequest.set_pwd("123456");
+
+  fixbug::RegisterResponse registerResponse;
   MprpcController register_controller;
-  stub.Register(&register_controller, &request01, &response01, nullptr);
+  stub.Register(&register_controller, &registerRequest, &registerResponse,
+                nullptr);
 
   if (register_controller.Failed()) {
     std::cout << "rpc register response error:"
               << register_controller.ErrorText() << std::endl;
-  } else if (response01.sucess()) {
-    std::cout << "rpc register response success:" << response01.sucess()
-              << std::endl;
-  } else {
-    std::cout << "rpc register response error:"
-              << response01.result().errormasg() << std::endl;
+    return 1;
   }
+
+  if (!registerResponse.sucess()) {
+    std::cout << "rpc register response error:"
+              << registerResponse.result().errormasg() << std::endl;
+    return 1;
+  }
+
+  std::cout << "rpc register response success:" << registerResponse.sucess()
+            << std::endl;
 
   return 0;
 }

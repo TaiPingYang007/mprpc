@@ -17,31 +17,38 @@ struct User {
 class FriendService : public fixbug::FriendServiceRpc {
 public:
   // 获取好友列表方法
-  std::vector<User> GetFriendList(uint32_t id) {
-    std::cout << "do GetFriendList service! userid:" << id << std::endl;
-    std::vector<User> vec;
-    vec.push_back({1, "zhang san"});
-    vec.push_back({2, "li si"});
-    vec.push_back({3, "wang wu"});
-    return vec;
+  std::vector<User> GetFriendListFromLocal(uint32_t userId) {
+    std::cout << "do GetFriendList service! userid:" << userId << std::endl;
+
+    std::vector<User> friendList;
+    friendList.push_back({1, "zhang san"});
+    friendList.push_back({2, "li si"});
+    friendList.push_back({3, "wang wu"});
+    return friendList;
   }
 
   // 重写基类方法
   void GetFriendList(::google::protobuf::RpcController *controller,
                      const ::fixbug::GetFriendListRequest *request,
                      ::fixbug::GetFriendListResponse *response,
-                     ::google::protobuf::Closure *done) {
-    uint32_t userid = request->userid();
-    std::vector<User> FriendList = GetFriendList(userid);
+                     ::google::protobuf::Closure *done) override {
+    (void)controller;
+    const uint32_t userId = request->userid();
+    const std::vector<User> friendList = GetFriendListFromLocal(userId);
 
     response->mutable_result()->set_errcode(0);
     response->mutable_result()->set_errmsg("");
-    for (User &user : FriendList) {
-      fixbug::User *_user = response->add_friend_list();
-      _user->set_userid(user.userid);
-      _user->set_name(user.name);
+
+    for (std::vector<User>::const_iterator it = friendList.begin();
+         it != friendList.end(); ++it) {
+      fixbug::User *user = response->add_friend_list();
+      user->set_userid(it->userid);
+      user->set_name(it->name);
     }
-    done->Run();
+
+    if (done != nullptr) {
+      done->Run();
+    }
   }
 };
 

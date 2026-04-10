@@ -24,6 +24,32 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/lib)
 find_package(Threads REQUIRED)
 find_package(Protobuf REQUIRED)
 
+set(MUDUO_ROOT
+    "/home/taipingyang/thirdparty/muduo"
+    CACHE PATH "Root directory of muduo")
+
+find_path(
+  MUDUO_INCLUDE_DIR
+  NAMES muduo/net/TcpServer.h
+  HINTS ${MUDUO_ROOT}/include)
+
+find_library(
+  MUDUO_NET_LIBRARY
+  NAMES muduo_net
+  HINTS ${MUDUO_ROOT}/lib)
+
+find_library(
+  MUDUO_BASE_LIBRARY
+  NAMES muduo_base
+  HINTS ${MUDUO_ROOT}/lib)
+
+if(NOT MUDUO_INCLUDE_DIR OR NOT MUDUO_NET_LIBRARY OR NOT MUDUO_BASE_LIBRARY)
+  message(
+    FATAL_ERROR
+      "muduo not found. Please set MUDUO_ROOT, for example: "
+      "-DMUDUO_ROOT=/home/taipingyang/thirdparty/muduo")
+endif()
+
 if(TARGET protobuf::libprotobuf)
   set(MPRPC_PROTOBUF_TARGET protobuf::libprotobuf)
 else()

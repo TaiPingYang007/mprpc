@@ -1,12 +1,14 @@
 #pragma once
 #include "google/protobuf/service.h"
 #include <memory>
-#include <mymuduo/EventLoop.h>
-#include <mymuduo/InetAddress.h>
-#include <mymuduo/TcpConnection.h>
-#include <mymuduo/TcpServer.h>
 #include <string>
 #include <unordered_map>
+#include <muduo/base/Timestamp.h>
+#include <muduo/net/Buffer.h>
+#include <muduo/net/EventLoop.h>
+#include <muduo/net/InetAddress.h>
+#include <muduo/net/TcpConnection.h>
+#include <muduo/net/TcpServer.h>
 
 // 框架提供的专门服务发布rpc服务的网络对象类
 class RpcProvider {
@@ -20,9 +22,9 @@ public:
 
 private:
   // 组合了TcpServer
-  std::unique_ptr<TcpServer> m_tcpserverPtr;
+  std::unique_ptr<muduo::net::TcpServer> m_tcpServerPtr;
   // 组合EventLoop
-  EventLoop m_eventLoop;
+  muduo::net::EventLoop m_eventLoop;
 
   // service 服务类型信息
   struct ServiceInfo {
@@ -35,11 +37,17 @@ private:
   std::unordered_map<std::string, ServiceInfo>
       m_serviceInfoMap; // 保存服务(服务名字，对应服务的信息)
 
+  void RegisterServiceToZookeeper(const std::string &ip, uint16_t port);
+  void ExecuteRpcRequest(const muduo::net::TcpConnectionPtr &conn,
+                         const std::string &serviceName,
+                         const std::string &methodName,
+                         const std::string &argsString);
   // 新的socket连接回调
-  void onConnection(const TcpConnectionPtr &conn);
+  void onConnection(const muduo::net::TcpConnectionPtr &conn);
   // 新的socket消息回调
-  void onMessage(const TcpConnectionPtr &conn, Buffer *buffer, Timestamp time);
+  void onMessage(const muduo::net::TcpConnectionPtr &conn,
+                 muduo::net::Buffer *buffer, muduo::Timestamp time);
   // Closure回调操作，用于序列化rpc的响应和网络发送
-  void SendRpcResponse(const TcpConnectionPtr &conn,
+  void SendRpcResponse(const muduo::net::TcpConnectionPtr &conn,
                        google::protobuf::Message *response);
 };

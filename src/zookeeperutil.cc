@@ -8,6 +8,8 @@
 // zkserver给zkclient的通知
 void global_watcher(zhandle_t *zh, int type, int state, const char *path,
                     void *watcherCtx) {
+  (void)path;
+  (void)watcherCtx;
   if (type == ZOO_SESSION_EVENT) // 回调的消息类型是和会话相关的消息类型
   {
     if (state == ZOO_CONNECTED_STATE) // zkclient成功连接上zkserver了
@@ -32,11 +34,11 @@ ZkClient::~ZkClient() {
 // zkclient启动连接zkserver
 void ZkClient::Start() {
   // 从配置文件加载zkserver的ip和端口号
-  std::string host =
+  const std::string host =
       MprpcApplication::GetInstance().GetConfig().Load("zookeeperip");
-  std::string port =
+  const std::string port =
       MprpcApplication::GetInstance().GetConfig().Load("zookeeperport");
-  std::string connstr = host + ":" + port;
+  const std::string connstr = host + ":" + port;
 
   /*
       zookeeper_mt：多线程版本
@@ -102,7 +104,7 @@ void ZkClient::Create(const char *path, const char *data, int datalen, int state
 // 根据参数指定的znode节点路径，获取znode节点的值
 std::string ZkClient::GetData(const char *path)
 {
-    char buffer[64];                // 存储获取到的znode节点的值
+    char buffer[64] = {0};         // 存储获取到的znode节点的值
     int buffer_len = sizeof(buffer); // 值缓冲区的长度
 
     int flag = zoo_get(m_zhandle, path, 0, buffer, &buffer_len, nullptr);
@@ -111,6 +113,6 @@ std::string ZkClient::GetData(const char *path)
       return ""; // 获取失败，返回空字符串
     } else
     {
-        return buffer; // 返回获取到的znode节点的值
+        return std::string(buffer, buffer_len); // 返回获取到的znode节点的值
     }
 }
