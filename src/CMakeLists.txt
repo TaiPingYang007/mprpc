@@ -1,24 +1,23 @@
-set(MPRPC_LIBRARY_SOURCES
-    logger.cc
+# 框架核心源文件列表
+set(MPRPC_SOURCES
     mprpcapplication.cc
-    mprpcchannel.cc
     mprpcconfig.cc
-    mprpccontroller.cc
+    mprpcchannel.cc
     mprpcprovider.cc
-    rpcherder.pb.cc
-    zookeeperutil.cc)
+    mprpccontroller.cc
+    zookeeperutil.cc
+    logger.cc
+    rpcherder.pb.cc     # protoc 自动生成的 RPC 帧头序列化代码
+)
 
-add_library(mprpc STATIC ${MPRPC_LIBRARY_SOURCES})
-add_library(mprpc::mprpc ALIAS mprpc)
+# 将框架编译为静态库 mprpc
+add_library(mprpc ${MPRPC_SOURCES})
 
-target_include_directories(
-  mprpc
-  PUBLIC
-    ${PROJECT_SOURCE_DIR}/src/include
-    ${MUDUO_INCLUDE_DIR}
-    ${Protobuf_INCLUDE_DIRS})
-
-target_link_libraries(
-  mprpc
-  PUBLIC ${MPRPC_PROTOBUF_TARGET} ${MUDUO_NET_LIBRARY} ${MUDUO_BASE_LIBRARY}
-         zookeeper_mt Threads::Threads)
+# 链接 mprpc 所需的第三方库
+target_link_libraries(mprpc
+    muduo_net       # Muduo 网络库（TcpServer / EventLoop）
+    muduo_base      # Muduo 基础库（日志、线程）
+    protobuf        # Protocol Buffers 序列化
+    zookeeper_mt    # ZooKeeper 多线程 C 客户端
+    pthread         # POSIX 线程
+)

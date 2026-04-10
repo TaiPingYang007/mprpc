@@ -1,4 +1,6 @@
 #pragma once
+#include "mprpccontroller.h"
+#include "zookeeperutil.h"
 #include "google/protobuf/service.h"
 #include <memory>
 #include <string>
@@ -23,6 +25,8 @@ public:
 private:
   // 组合了TcpServer
   std::unique_ptr<muduo::net::TcpServer> m_tcpServerPtr;
+  // 保持 zk 会话常驻，避免临时节点注册后立刻失效
+  std::unique_ptr<ZkClient> m_zkClientPtr;
   // 组合EventLoop
   muduo::net::EventLoop m_eventLoop;
 
@@ -37,7 +41,9 @@ private:
   std::unordered_map<std::string, ServiceInfo>
       m_serviceInfoMap; // 保存服务(服务名字，对应服务的信息)
 
-  void RegisterServiceToZookeeper(const std::string &ip, uint16_t port);
+  struct RpcCallContext;
+
+  bool RegisterServiceToZookeeper(const std::string &ip, uint16_t port);
   void ExecuteRpcRequest(const muduo::net::TcpConnectionPtr &conn,
                          const std::string &serviceName,
                          const std::string &methodName,
@@ -49,5 +55,5 @@ private:
                  muduo::net::Buffer *buffer, muduo::Timestamp time);
   // Closure回调操作，用于序列化rpc的响应和网络发送
   void SendRpcResponse(const muduo::net::TcpConnectionPtr &conn,
-                       google::protobuf::Message *response);
+                       RpcCallContext *callContext);
 };

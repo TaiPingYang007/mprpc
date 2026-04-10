@@ -1,63 +1,30 @@
-cmake_minimum_required(VERSION 3.16)
-project(mprpc VERSION 0.1.0 LANGUAGES CXX)
+cmake_minimum_required(VERSION 3.10)
+project(mprpc)
 
-set(CMAKE_CXX_STANDARD 14)
+# 使用 C++11 标准
+set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
-  set(CMAKE_BUILD_TYPE
-      Debug
-      CACHE STRING "Choose the build type." FORCE)
-  set_property(
-    CACHE CMAKE_BUILD_TYPE
-    PROPERTY STRINGS Debug Release RelWithDebInfo MinSizeRel)
-endif()
+# Muduo 根目录，可通过 -DMUDUO_ROOT=<path> 覆盖
+set(MUDUO_ROOT "/home/taipingyang/thirdparty/muduo"
+    CACHE PATH "Muduo library root directory")
 
-option(MPRPC_BUILD_EXAMPLES "Build the example provider and consumer programs" ON)
+# 全局可执行文件输出目录
+set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
+# 全局库文件输出目录
+set(LIBRARY_OUTPUT_PATH    ${PROJECT_SOURCE_DIR}/lib)
 
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin)
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/lib)
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/lib)
+# 全局头文件搜索路径
+include_directories(
+    ${PROJECT_SOURCE_DIR}/src/include   # mprpc 框架头文件
+    ${MUDUO_ROOT}/include               # Muduo 头文件
+)
 
-find_package(Threads REQUIRED)
-find_package(Protobuf REQUIRED)
+# 全局链接路径（Muduo 预编译库所在目录）
+link_directories(
+    ${MUDUO_ROOT}/lib
+)
 
-set(MUDUO_ROOT
-    "/home/taipingyang/thirdparty/muduo"
-    CACHE PATH "Root directory of muduo")
-
-find_path(
-  MUDUO_INCLUDE_DIR
-  NAMES muduo/net/TcpServer.h
-  HINTS ${MUDUO_ROOT}/include)
-
-find_library(
-  MUDUO_NET_LIBRARY
-  NAMES muduo_net
-  HINTS ${MUDUO_ROOT}/lib)
-
-find_library(
-  MUDUO_BASE_LIBRARY
-  NAMES muduo_base
-  HINTS ${MUDUO_ROOT}/lib)
-
-if(NOT MUDUO_INCLUDE_DIR OR NOT MUDUO_NET_LIBRARY OR NOT MUDUO_BASE_LIBRARY)
-  message(
-    FATAL_ERROR
-      "muduo not found. Please set MUDUO_ROOT, for example: "
-      "-DMUDUO_ROOT=/home/taipingyang/thirdparty/muduo")
-endif()
-
-if(TARGET protobuf::libprotobuf)
-  set(MPRPC_PROTOBUF_TARGET protobuf::libprotobuf)
-else()
-  set(MPRPC_PROTOBUF_TARGET ${Protobuf_LIBRARIES})
-endif()
-
+# 递归构建子目录
 add_subdirectory(src)
-
-if(MPRPC_BUILD_EXAMPLES)
-  add_subdirectory(example)
-endif()
+add_subdirectory(example)
