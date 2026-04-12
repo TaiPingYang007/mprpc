@@ -4,6 +4,7 @@ project(mprpc)
 # 使用 C++11 标准
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Muduo 根目录，可通过 -DMUDUO_ROOT=<path> 覆盖
 set(MUDUO_ROOT "/home/taipingyang/thirdparty/muduo"
