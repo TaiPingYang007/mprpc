@@ -8,49 +8,71 @@
 #include <time.h>
 #include <zookeeper/zookeeper.h>
 
-namespace {
-int LoadTimeoutMs(const std::string &key, int defaultValue) {
-  const std::string value =
-      MprpcApplication::GetInstance().GetConfig().Load(key);
-  if (value.empty()) {
-    return defaultValue;
+namespace
+{
+  // 拿着一个 key（比如 "zk_timeout"），去配置文件里找对应的值，如果找不到就返回默认值
+  int LoadTimeoutMs(const std::string &key, int defaultValue)
+  {
+    const std::string value =
+        MprpcApplication::GetInstance().GetConfig().Load(key);
+    if (value.empty())
+    {
+      return defaultValue; // 默认值
+    }
+
+    /*
+      std::atoi (C 风格) VS	std::stoi (C++11 风格)
+      std::atoi 是一个 C 风格的函数，接受一个 const char* 类型的字符串参数，并将其转换为整数。它在转换过程中不会抛出异常，如果转换失败会返回 0。
+      std::stoi 是一个 C++11 风格的函数，接受一个 const std::string& 类型的字符串参数，并将其转换为整数。它在转换过程中会抛出 std::invalid_argument 异常（如果输入的字符串不是一个有效的整数）或 std::out_of_range 异常（如果输入的整数超出 int 类型的范围）。
+    */
+
+    try // 用于接收 std::stoi 可能抛出的异常，如果转换失败就返回默认值
+    {
+      const int timeoutMs = std::stoi(value);
+      return timeoutMs > 0 ? timeoutMs : defaultValue;
+    }
+    catch (...)
+    {
+      return defaultValue;
+    }
   }
 
-  try {
-    const int timeoutMs = std::stoi(value);
-    return timeoutMs > 0 ? timeoutMs : defaultValue;
-  } catch (...) {
-    return defaultValue;
+  // 传入你要等的毫秒数 timeoutMs，返回一个 C 语言底层的 timespec 结构体。
+  timespec BuildAbsoluteTimeout(int timeoutMs)
+  {
+    timespec absTimeout;
+    /*
+      大水桶（tv_sec）：装“秒”。
+      小水桶（tv_nsec）：装“纳秒”（零头）。
+    */
+    clock_gettime(CLOCK_REALTIME, &absTimeout); // CLOCK_REALTIME 表示现实世界的真实时间
+
+    absTimeout.tv_sec += timeoutMs / 1000;                                // 毫秒/1000 = 秒
+    absTimeout.tv_nsec += static_cast<long>(timeoutMs % 1000) * 1000000L; // 毫秒%1000 = 毫秒的零头，乘以1000000L转换为纳秒
+    if (absTimeout.tv_nsec >= 1000000000L)
+    {
+      absTimeout.tv_sec += 1;
+      absTimeout.tv_nsec -= 1000000000L;
+    }
+
+    return absTimeout;
   }
-}
-
-timespec BuildAbsoluteTimeout(int timeoutMs) {
-  timespec absTimeout;
-  clock_gettime(CLOCK_REALTIME, &absTimeout);
-
-  absTimeout.tv_sec += timeoutMs / 1000;
-  absTimeout.tv_nsec += static_cast<long>(timeoutMs % 1000) * 1000000L;
-  if (absTimeout.tv_nsec >= 1000000000L) {
-    absTimeout.tv_sec += 1;
-    absTimeout.tv_nsec -= 1000000000L;
-  }
-
-  return absTimeout;
-}
 } // namespace
 
 // 全局的watcher观察器函数，zkserver发生变化时会调用这个函数
 // zkserver给zkclient的通知
 void global_watcher(zhandle_t *zh, int type, int state, const char *path,
-                    void *watcherCtx) {
+                    void *watcherCtx)
+{
   (void)path;
   (void)watcherCtx;
   if (type == ZOO_SESSION_EVENT) // 回调的消息类型是和会话相关的消息类型
   {
     if (state == ZOO_CONNECTED_STATE) // zkclient成功连接上zkserver了
     {
+      // 将set_context把一个“自定义指针”挂到 ZooKeeper 句柄上的“自定义指针”取出来
       sem_t *sem = (sem_t *)zoo_get_context(
-          zh); // 从zkclient获取上下文参数，这里是信号量的地址
+          zh);       // 从zkclient获取上下文参数，这里是信号量的地址
       sem_post(sem); // 释放信号量，通知Start函数继续执行
     }
   }
@@ -60,15 +82,19 @@ void global_watcher(zhandle_t *zh, int type, int state, const char *path,
 ZkClient::ZkClient() : m_zhandle(nullptr) {}
 
 // 析构函数
-ZkClient::~ZkClient() {
-  if (m_zhandle != nullptr) {
+ZkClient::~ZkClient()
+{
+  if (m_zhandle != nullptr)
+  {
     zookeeper_close(m_zhandle); // 关闭zkclient连接，释放资源
   }
 }
 
 // zkclient启动连接zkserver
-bool ZkClient::Start() {
-  if (m_zhandle != nullptr) {
+bool ZkClient::Start()
+{
+  if (m_zhandle != nullptr)
+  {
     return true;
   }
 
@@ -100,12 +126,13 @@ bool ZkClient::Start() {
       int flags: 连接选项，通常设置为0
       返回值：成功时返回一个指向zhandle_t结构的指针，失败时返回nullptr，并且errno会被设置为错误码
    */
-  // 连接zkserver，超时时间设置为30000ms，连接成功后会返回一个zkclient句柄
+  // 连接zkserver，会话超时时间设置为30000ms，超过30000mszk服务器会自动断开，连接成功后会返回一个zkclient句柄
   m_zhandle = zookeeper_init(connstr.c_str(), global_watcher, sessionTimeoutMs,
                              nullptr,
                              nullptr, 0);
   // 判断zkclient句柄创建是否成功
-  if (m_zhandle == nullptr) {
+  if (m_zhandle == nullptr)
+  {
     std::cerr << "zookeeper_init error!" << std::endl;
     LOG_ERROR("zookeeper_init error! connstr=%s", connstr.c_str());
     return false;
@@ -113,6 +140,7 @@ bool ZkClient::Start() {
 
   sem_t sem;            // 定义一个信号量
   sem_init(&sem, 0, 0); // 初始化信号量，初始值为0
+  // 把一个“自定义指针”挂到 ZooKeeper 句柄上。
   zoo_set_context(m_zhandle,
                   &sem); // 将信号量的地址作为上下文参数传递给zkclient
 
@@ -120,11 +148,13 @@ bool ZkClient::Start() {
   const int waitResult = sem_timedwait(&sem, &absTimeout);
   zoo_set_context(m_zhandle, nullptr);
   sem_destroy(&sem);
-  if (waitResult != 0) {
+  if (waitResult != 0)
+  {
     std::cerr << "zookeeper connect timeout after " << connectTimeoutMs
               << " ms, reason: " << std::strerror(errno) << std::endl;
     LOG_ERROR("zookeeper connect timeout after %d ms, connstr=%s, reason=%s",
               connectTimeoutMs, connstr.c_str(), std::strerror(errno));
+    // 超时后关闭句柄
     zookeeper_close(m_zhandle);
     m_zhandle = nullptr;
     return false;
@@ -136,8 +166,10 @@ bool ZkClient::Start() {
 }
 
 // 在zkserver上根据指定的path创建znode节点  ps：默认是0为永久性节点
-void ZkClient::Create(const char *path, const char *data, int datalen, int state) {
-  if (m_zhandle == nullptr) {
+void ZkClient::Create(const char *path, const char *data, int datalen, int state)
+{
+  if (m_zhandle == nullptr)
+  {
     std::cerr << "zookeeper client is not connected, create failed. path: "
               << path << std::endl;
     LOG_ERROR("zookeeper client is not connected, create failed. path=%s",
@@ -157,10 +189,13 @@ void ZkClient::Create(const char *path, const char *data, int datalen, int state
     // 创建指定path的znode节点
     flag = zoo_create(ZkClient::m_zhandle, path, data, datalen, &ZOO_OPEN_ACL_UNSAFE,
                       state, path_buffer, buffer_len);
-    if (flag == ZOK) {
+    if (flag == ZOK)
+    {
       std::cout << "znode create success, path: " << path_buffer << std::endl;
       LOG_INFO("znode create success, path=%s", path_buffer);
-    } else {
+    }
+    else
+    {
       std::cout << "flag: " << flag << std::endl;
       std::cerr << "znode create error, path: " << path << std::endl;
       LOG_ERROR("znode create error, path=%s, flag=%d", path, flag);
@@ -172,25 +207,29 @@ void ZkClient::Create(const char *path, const char *data, int datalen, int state
 // 根据参数指定的znode节点路径，获取znode节点的值
 std::string ZkClient::GetData(const char *path)
 {
-    if (m_zhandle == nullptr) {
-      std::cerr << "zookeeper client is not connected, get data failed. path: "
-                << path << std::endl;
-      LOG_ERROR("zookeeper client is not connected, get data failed. path=%s",
-                path);
-      return "";
-    }
+  if (m_zhandle == nullptr)
+  {
+    std::cerr << "zookeeper client is not connected, get data failed. path: "
+              << path << std::endl;
+    LOG_ERROR("zookeeper client is not connected, get data failed. path=%s",
+              path);
+    return "";
+  }
 
-    char buffer[64] = {0};         // 存储获取到的znode节点的值
-    int buffer_len = sizeof(buffer); // 值缓冲区的长度
+  char buffer[64] = {0};           // 存储获取到的znode节点的值
+  int buffer_len = sizeof(buffer); // 值缓冲区的长度
 
-    int flag = zoo_get(m_zhandle, path, 0, buffer, &buffer_len, nullptr);
-    if (flag != ZOK) {
-      std::cerr << "znode get error, path: " << path << std::endl;
-      LOG_ERROR("znode get error, path=%s, flag=%d", path, flag);
-      return ""; // 获取失败，返回空字符串
-    } else
-    {
-        LOG_INFO("znode get success, path=%s", path);
-        return std::string(buffer, buffer_len); // 返回获取到的znode节点的值
-    }
+  // zoo_get由zookeeper提供的API函数，根据参数指定的znode节点路径，获取znode节点的值，返回值flag表示获取结果，获取成功时返回ZOK，获取失败时返回错误码
+  int flag = zoo_get(m_zhandle, path, 0, buffer, &buffer_len, nullptr); // buffer_len会被修改为实际获取到的值的长度
+  if (flag != ZOK)
+  {
+    std::cerr << "znode get error, path: " << path << std::endl;
+    LOG_ERROR("znode get error, path=%s, flag=%d", path, flag);
+    return ""; // 获取失败，返回空字符串
+  }
+  else
+  {
+    LOG_INFO("znode get success, path=%s", path);
+    return std::string(buffer, buffer_len); // 返回获取到的znode节点的值
+  }
 }
