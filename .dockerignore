@@ -1,0 +1,10 @@
+.git
+.gitignore
+build
+bin/*
+lib
+*.log
+*-log.txt
+.vscode
+.cache
+compose.override.yaml

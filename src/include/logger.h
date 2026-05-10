@@ -1,33 +1,32 @@
 #pragma once
 #include "lockqueue.h"
+#include <cstdio>
+#include <string>
 
-// Mprpc框架提供的日志系统
 enum class LogLevel {
-  INFO,  // 普通消息
-  ERROR, // 错误消息
+  INFO,
+  ERROR,
 };
 
 class Logger {
 public:
-  // 单列模式
   static Logger &GetInstance();
 
-  // 设置日志的级别
   void SetLogLevel(LogLevel level);
-
-  // 写日志
   void Log(std::string msg, int level);
 
 private:
-  int m_loglevel;                     // 记录日志级别
-  LockQueue<std::string> m_lockQueue; // 日志缓冲队列
-
   Logger();
+  void StartConsumer();
+  std::string BuildPrefix(int level) const;
+
+  int m_loglevel;
+  LockQueue<std::string> m_lockQueue;
+
   Logger(const Logger &) = delete;
   Logger(Logger &&) = delete;
 };
 
-// 定义宏：普通信息日志
 #define LOG_INFO(logmsgformat, ...)                                            \
   do {                                                                         \
     Logger &logger = Logger::GetInstance();                                    \
@@ -37,7 +36,6 @@ private:
     logger.Log(c, 0);                                                          \
   } while (0)
 
-// 定义宏：错误信息日志
 #define LOG_ERROR(logmsgformat, ...)                                           \
   do {                                                                         \
     Logger &logger = Logger::GetInstance();                                    \

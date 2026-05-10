@@ -7,9 +7,8 @@
 a.out
 
 # 2. 忽略运行时产生的可执行文件和日志
-# 忽略 bin 目录下的一切，但保留 test.conf
+# 忽略 bin 目录下的一切
 /bin/*
-!/bin/test.conf
 *.log
 *.txt
 !CMakeLists.txt
