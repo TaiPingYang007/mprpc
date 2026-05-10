@@ -20,6 +20,8 @@ tmp/
 
 # IDE / editor / tooling caches
 .cache/
+.agents/
+.codex/
 .clangd/
 .idea/
 .vscode/
