@@ -1,19 +1,35 @@
-# 1. 忽略所有编译产物和临时文件
+# Build outputs
 /build/
 /lib/
+/bin/*
 *.o
 *.a
 *.so
-a.out
+*.out
 
-# 2. 忽略运行时产生的可执行文件和日志
-# 忽略 bin 目录下的一切
-/bin/*
+# Runtime logs and local temp files
 *.log
-*.txt
-!CMakeLists.txt
+*-log.txt
+logs/
+tmp/
 
-# 3. 忽略 IDE 和环境生成的本地缓存文件
+# Local environment files
+.env
+.env.*
+!.env.example
+
+# IDE / editor / tooling caches
 .cache/
-compile_commands.json
+.clangd/
+.idea/
 .vscode/
+compile_commands.json
+cmake-build-*/
+*.swp
+*.swo
+.DS_Store
+
+# Local Docker overrides
+compose.override.yaml
+compose.override.yml
+docker-compose.override.yml
