@@ -245,6 +245,76 @@ docker compose logs -f friendservice-1
 - `register rpc provider node ...`
 - `rpc provider start bind=0.0.0.0:8000 advertise=...`
 
+### 如何看输出
+
+运行 `docker compose run --rm ...` 时，终端里通常会混着几类输出：
+
+1. Docker Compose 自己的状态输出
+
+例如：
+
+```text
+[+] ...
+Container mprpc-userservice-1 Waiting
+Container mprpc-userservice-1 Healthy
+Container mprpc-client-run-xxxx Creating
+```
+
+这部分只是 Docker 在告诉你：
+
+- 容器有没有启动
+- 健康检查有没有通过
+- 临时客户端容器有没有创建成功
+
+2. ZooKeeper C 客户端日志
+
+例如：
+
+```text
+ZOO_INFO@log_env...
+ZOO_INFO@zookeeper_init_internal...
+ZOO_INFO@zookeeper_close...
+```
+
+这部分不是 Docker 打的，也不是你的业务结果，而是 ZooKeeper C 库自己的连接日志。
+
+3. 框架日志
+
+例如：
+
+```text
+[INFO] 06:13:21 => zkclient start success! endpoints=zookeeper:2181
+[INFO] 06:13:21 => rpc connect success! service=UserServiceRpc method=Login target=userservice-2:8000
+```
+
+这部分是当前 RPC 框架自己的运行日志。
+
+4. 真正需要重点看的业务结果
+
+例如：
+
+```text
+rpc login response success：1
+rpc register response success:1
+rpc GetFriendList success !
+userid:1 name:zhang san
+userid:2 name:li si
+userid:3 name:wang wu
+```
+
+如果你是为了确认“项目是不是跑通了”，最重要的就是这几行业务结果。
+
+简单记法：
+
+- `Container ...` / `[+] ...`
+  - Docker 的
+- `ZOO_INFO...`
+  - ZooKeeper 库的
+- `[INFO] ... =>`
+  - 框架日志
+- `rpc ... success` / `userid:...`
+  - 真正的验证结果
+
 ### 为什么日志里会看到很多 `newConnection/removeConnection`
 
 这是正常现象，主要来自 `docker compose` 的健康检查：
