@@ -9,6 +9,51 @@
 - 标准测试方式是 `docker compose run --rm ...`
 - 不再要求先在宿主机手工安装 Muduo、Protobuf、ZooKeeper C Client
 
+## 超短照抄版
+
+如果你以后只想照着跑这一套，直接按下面执行：
+
+```bash
+cp .env.example .env
+docker compose build
+docker compose up -d zookeeper userservice-1 userservice-2 friendservice-1
+docker compose ps
+docker compose run --rm client calluserservice
+docker compose run --rm client callfriendservice
+docker compose run --rm smoke-test
+docker compose down -v --remove-orphans
+```
+
+对应成功信号：
+
+`docker compose ps`
+
+- `zookeeper` 为 `Up`
+- `userservice-1`、`userservice-2`、`friendservice-1` 为 `Up`
+- 三个业务服务最好显示为 `healthy`
+
+`docker compose run --rm client calluserservice`
+
+```text
+rpc login response success：1
+rpc register response success:1
+```
+
+`docker compose run --rm client callfriendservice`
+
+```text
+rpc GetFriendList success !
+userid:1 name:zhang san
+userid:2 name:li si
+userid:3 name:wang wu
+```
+
+`docker compose run --rm smoke-test`
+
+- 会顺序跑一遍用户服务和好友服务调用
+- 正常退出即可
+- 如果想明确确认退出码，可以执行 `echo $?`，预期为 `0`
+
 ## 快速开始
 
 ### 1. 准备环境变量

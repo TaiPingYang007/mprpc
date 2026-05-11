@@ -77,8 +77,10 @@ void Logger::StartConsumer() {
 }
 
 Logger &Logger::GetInstance() {
-  static Logger logger;
-  return logger;
+  // Intentionally leak the singleton so process shutdown does not race with the
+  // detached consumer thread destroying synchronization primitives.
+  static Logger *logger = new Logger();
+  return *logger;
 }
 
 void Logger::SetLogLevel(LogLevel level) {
