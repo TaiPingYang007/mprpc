@@ -1,4 +1,4 @@
-# Build outputs
+# Local build outputs
 /build/
 /lib/
 /bin/*
@@ -6,6 +6,7 @@
 *.a
 *.so
 *.out
+Testing/
 
 # Runtime logs and local temp files
 *.log
@@ -16,7 +17,6 @@ tmp/
 # Local environment files
 .env
 .env.*
-!.env.example
 
 # IDE / editor / tooling caches
 .cache/
@@ -27,6 +27,7 @@ tmp/
 .vscode/
 compile_commands.json
 cmake-build-*/
+CMakeUserPresets.json
 *.swp
 *.swo
 .DS_Store

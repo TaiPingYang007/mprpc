@@ -4,6 +4,9 @@ add_executable(userservice
     userservice.cc
     ${PROJECT_SOURCE_DIR}/example/user.pb.cc
 )
+set_target_properties(userservice PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/bin
+)
 # 链接框架静态库（已包含 protobuf / muduo / zookeeper 等传递依赖）
 target_link_libraries(userservice mprpc)
 
@@ -11,5 +14,8 @@ target_link_libraries(userservice mprpc)
 add_executable(friendservice
     firendservice.cc
     ${PROJECT_SOURCE_DIR}/example/friend.pb.cc
+)
+set_target_properties(friendservice PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/bin
 )
 target_link_libraries(friendservice mprpc)

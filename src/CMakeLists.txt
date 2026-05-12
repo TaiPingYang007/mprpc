@@ -13,6 +13,11 @@ set(MPRPC_SOURCES
 # 将框架编译为静态库 mprpc
 add_library(mprpc ${MPRPC_SOURCES})
 
+set_target_properties(mprpc PROPERTIES
+    ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/lib
+    LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/lib
+)
+
 # 链接 mprpc 所需的第三方库
 target_link_libraries(mprpc
     muduo_net       # Muduo 网络库（TcpServer / EventLoop）

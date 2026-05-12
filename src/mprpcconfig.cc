@@ -10,7 +10,7 @@
 namespace {
 const std::unordered_map<std::string, std::string> &DefaultConfig() {
   static const std::unordered_map<std::string, std::string> defaults = {
-      {"RPC_BIND_IP", "0.0.0.0"},
+      {"RPC_BIND_IP", "127.0.0.1"},
       {"RPC_PORT", "8000"},
       {"RPC_ADVERTISE_HOST", "127.0.0.1"},
       {"RPC_IO_THREADS", "4"},
