@@ -13,7 +13,7 @@ message ResultCode
 } 
 
 // 数据（单个数据） 列表（数组） 映射表（mp表）
-// 登录消息类型定义 name pwd
+// 登录请求消息类型定义 name pwd
 message LoginRequest //message定义数据类型
 {
     // bytes 定义字符串类型
