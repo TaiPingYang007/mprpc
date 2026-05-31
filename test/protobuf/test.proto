@@ -49,7 +49,7 @@ message User
 message GetFriendListResponse
 {
     ResultCode result = 1;
-    repeated User friend_list = 2; // repeated 表示重复，重复User就是定义了一个链表类型
+    repeated User friend_list = 2; // repeated 表示重复，重复User就是定义了一个列表类型
 }
 
 // 在protobuf里面怎么定义描述rpc方法的类型 - service
