@@ -22,6 +22,8 @@ tmp/
 .cache/
 .agents/
 .codex/
+.codegraph/
+docs/
 .clangd/
 .idea/
 .vscode/
