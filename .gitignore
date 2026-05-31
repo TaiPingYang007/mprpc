@@ -1,7 +1,8 @@
 # Local build outputs
 /build/
 /lib/
-/bin/*
+/bin/
+/dist/
 *.o
 *.a
 *.so
@@ -21,6 +22,7 @@ tmp/
 # IDE / editor / tooling caches
 .cache/
 .agents/
+.claude/
 .codex/
 .codegraph/
 docs/

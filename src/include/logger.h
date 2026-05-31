@@ -3,43 +3,43 @@
 #include <cstdio>
 #include <string>
 
-enum class LogLevel {
+enum class RpcLogLevel {
   INFO,
   ERROR,
 };
 
-class Logger {
+class RpcLogger {
 public:
-  static Logger &GetInstance();
+  static RpcLogger &GetInstance();
 
-  void SetLogLevel(LogLevel level);
+  void SetLogLevel(RpcLogLevel level);
   void Log(std::string msg, int level);
 
 private:
-  Logger();
+  RpcLogger();
   void StartConsumer();
   std::string BuildPrefix(int level) const;
 
   int m_loglevel;
-  LockQueue<std::string> m_lockQueue;
+  RpcLockQueue<std::string> m_lockQueue;
 
-  Logger(const Logger &) = delete;
-  Logger(Logger &&) = delete;
+  RpcLogger(const RpcLogger &) = delete;
+  RpcLogger(RpcLogger &&) = delete;
 };
 
-#define LOG_INFO(logmsgformat, ...)                                            \
+#define RPC_LOG_INFO(logmsgformat, ...)                                        \
   do {                                                                         \
-    Logger &logger = Logger::GetInstance();                                    \
-    logger.SetLogLevel(LogLevel::INFO);                                        \
+    RpcLogger &logger = RpcLogger::GetInstance();                              \
+    logger.SetLogLevel(RpcLogLevel::INFO);                                     \
     char c[1024] = {0};                                                        \
     snprintf(c, 1024, logmsgformat, ##__VA_ARGS__);                            \
     logger.Log(c, 0);                                                          \
   } while (0)
 
-#define LOG_ERROR(logmsgformat, ...)                                           \
+#define RPC_LOG_ERROR(logmsgformat, ...)                                       \
   do {                                                                         \
-    Logger &logger = Logger::GetInstance();                                    \
-    logger.SetLogLevel(LogLevel::ERROR);                                       \
+    RpcLogger &logger = RpcLogger::GetInstance();                              \
+    logger.SetLogLevel(RpcLogLevel::ERROR);                                    \
     char c[1024] = {0};                                                        \
     snprintf(c, 1024, logmsgformat, ##__VA_ARGS__);                            \
     logger.Log(c, 1);                                                          \

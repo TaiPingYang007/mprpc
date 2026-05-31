@@ -4,7 +4,7 @@
 #include <queue>
 
 // 异步写日志的日志队列 ps:使用了模板就不能使用分文件编写
-template <class T> class LockQueue {
+template <class T> class RpcLockQueue {
 public:
   // 生产者（多个线程向队列写东西）
   void Push(const T &msg) {

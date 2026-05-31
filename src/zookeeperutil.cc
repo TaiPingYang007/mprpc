@@ -96,7 +96,7 @@ bool ZkClient::Start(bool retryUntilReady) {
     m_zhandle = zookeeper_init(endpoints.c_str(), global_watcher, sessionTimeoutMs,
                                nullptr, nullptr, 0);
     if (m_zhandle == nullptr) {
-      LOG_ERROR("zookeeper_init error! endpoints=%s", endpoints.c_str());
+      RPC_LOG_ERROR("zookeeper_init error! endpoints=%s", endpoints.c_str());
     } else {
       sem_t sem;
       sem_init(&sem, 0, 0);
@@ -107,11 +107,11 @@ bool ZkClient::Start(bool retryUntilReady) {
       zoo_set_context(m_zhandle, nullptr);
       sem_destroy(&sem);
       if (waitResult == 0) {
-        LOG_INFO("zkclient start success! endpoints=%s", endpoints.c_str());
+        RPC_LOG_INFO("zkclient start success! endpoints=%s", endpoints.c_str());
         return true;
       }
 
-      LOG_ERROR("zookeeper connect timeout after %d ms, endpoints=%s, reason=%s",
+      RPC_LOG_ERROR("zookeeper connect timeout after %d ms, endpoints=%s, reason=%s",
                 connectTimeoutMs, endpoints.c_str(), std::strerror(errno));
       zookeeper_close(m_zhandle);
       m_zhandle = nullptr;
@@ -129,7 +129,7 @@ bool ZkClient::Start(bool retryUntilReady) {
 
 bool ZkClient::Create(const char *path, const char *data, int datalen, int state) {
   if (m_zhandle == nullptr) {
-    LOG_ERROR("zookeeper client is not connected, create failed. path=%s", path);
+    RPC_LOG_ERROR("zookeeper client is not connected, create failed. path=%s", path);
     return false;
   }
 
@@ -147,9 +147,9 @@ bool ZkClient::Create(const char *path, const char *data, int datalen, int state
                               state, createdPath, bufferLen);
   if (flag == ZOK || flag == ZNODEEXISTS) {
     if (createdPath[0] != '\0') {
-      LOG_INFO("znode create success, path=%s", createdPath);
+      RPC_LOG_INFO("znode create success, path=%s", createdPath);
     } else {
-      LOG_INFO("znode create success, path=%s", path);
+      RPC_LOG_INFO("znode create success, path=%s", path);
     }
     return true;
   }
@@ -158,14 +158,14 @@ bool ZkClient::Create(const char *path, const char *data, int datalen, int state
     return false;
   }
 
-  LOG_ERROR("znode create error, path=%s, flag=%d", path, flag);
+  RPC_LOG_ERROR("znode create error, path=%s, flag=%d", path, flag);
   return false;
 }
 
 std::string ZkClient::CreateSequential(const char *pathPrefix, const char *data,
                                        int datalen, int state) {
   if (m_zhandle == nullptr) {
-    LOG_ERROR("zookeeper client is not connected, create sequential failed. path=%s",
+    RPC_LOG_ERROR("zookeeper client is not connected, create sequential failed. path=%s",
               pathPrefix);
     return "";
   }
@@ -175,18 +175,18 @@ std::string ZkClient::CreateSequential(const char *pathPrefix, const char *data,
                               &ZOO_OPEN_ACL_UNSAFE, state | ZOO_SEQUENCE,
                               createdPath, static_cast<int>(sizeof(createdPath)));
   if (flag != ZOK) {
-    LOG_ERROR("znode create sequential error, path=%s, flag=%d", pathPrefix,
+    RPC_LOG_ERROR("znode create sequential error, path=%s, flag=%d", pathPrefix,
               flag);
     return "";
   }
 
-  LOG_INFO("znode create sequential success, path=%s", createdPath);
+  RPC_LOG_INFO("znode create sequential success, path=%s", createdPath);
   return createdPath;
 }
 
 std::string ZkClient::GetData(const char *path) {
   if (m_zhandle == nullptr) {
-    LOG_ERROR("zookeeper client is not connected, get data failed. path=%s", path);
+    RPC_LOG_ERROR("zookeeper client is not connected, get data failed. path=%s", path);
     return "";
   }
 
@@ -194,7 +194,7 @@ std::string ZkClient::GetData(const char *path) {
   int bufferLen = static_cast<int>(sizeof(buffer));
   int flag = zoo_get(m_zhandle, path, 0, buffer, &bufferLen, nullptr);
   if (flag != ZOK) {
-    LOG_ERROR("znode get error, path=%s, flag=%d", path, flag);
+    RPC_LOG_ERROR("znode get error, path=%s, flag=%d", path, flag);
     return "";
   }
 
@@ -204,7 +204,7 @@ std::string ZkClient::GetData(const char *path) {
 std::vector<std::string> ZkClient::GetChildren(const char *path) {
   std::vector<std::string> children;
   if (m_zhandle == nullptr) {
-    LOG_ERROR("zookeeper client is not connected, get children failed. path=%s",
+    RPC_LOG_ERROR("zookeeper client is not connected, get children failed. path=%s",
               path);
     return children;
   }

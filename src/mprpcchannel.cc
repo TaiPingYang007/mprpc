@@ -46,7 +46,7 @@ std::string BuildSocketErrorMessage(const std::string &action) {
 
 void SetRpcFailure(google::protobuf::RpcController *controller,
                    const std::string &errorMessage) {
-  LOG_ERROR("%s", errorMessage.c_str());
+  RPC_LOG_ERROR("%s", errorMessage.c_str());
   controller->SetFailed(errorMessage);
 }
 
@@ -370,7 +370,7 @@ void MprpcChannel::CallMethod(const google::protobuf::MethodDescriptor *method,
     return;
   }
 
-  LOG_INFO("rpc connect success! service=%s method=%s target=%s:%u",
+  RPC_LOG_INFO("rpc connect success! service=%s method=%s target=%s:%u",
            serviceName.c_str(), methodName.c_str(), host.c_str(), port);
 
   if (!SetSocketTimeout(guard.get(), SO_SNDTIMEO, sendTimeoutMs)) {

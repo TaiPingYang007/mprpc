@@ -11,18 +11,31 @@ set(MPRPC_SOURCES
 )
 
 # 将框架编译为静态库 mprpc
-add_library(mprpc ${MPRPC_SOURCES})
+add_library(mprpc STATIC ${MPRPC_SOURCES})
+
+target_include_directories(mprpc
+    PUBLIC
+        ${PROJECT_SOURCE_DIR}/src/include
+)
 
 set_target_properties(mprpc PROPERTIES
     ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/lib
-    LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/lib
 )
 
 # 链接 mprpc 所需的第三方库
 target_link_libraries(mprpc
-    muduo_net       # Muduo 网络库（TcpServer / EventLoop）
-    muduo_base      # Muduo 基础库（日志、线程）
-    protobuf        # Protocol Buffers 序列化
-    zookeeper_mt    # ZooKeeper 多线程 C 客户端
-    pthread         # POSIX 线程
+    PUBLIC
+        muduo_net       # Public headers expose Muduo types
+        muduo_base      # Muduo 基础库（日志、线程）
+        protobuf        # Public headers expose Protocol Buffers types
+        zookeeper_mt    # Public headers expose ZooKeeper types
+        pthread         # Required by the static RPC library and dependencies
+)
+
+install(TARGETS mprpc
+    ARCHIVE DESTINATION lib
+)
+
+install(DIRECTORY ${PROJECT_SOURCE_DIR}/src/include/
+    DESTINATION include
 )

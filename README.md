@@ -93,7 +93,21 @@ cmake --build build -j"$(nproc)"
 - 静态库输出到 `build/lib/libmprpc.a`
 - 不再把产物默认输出到项目根目录 `bin/`、`lib/`
 
-### 4. 本地运行服务端
+### 4. 导出静态库给外部项目
+
+```bash
+cmake --install build --prefix dist/mprpc
+```
+
+预期：
+
+- 头文件输出到 `dist/mprpc/include/`
+- 静态库输出到 `dist/mprpc/lib/libmprpc.a`
+- `dist/` 是本地交付产物目录，不纳入 git
+
+BridgeIM 或其他项目接入时，使用 `dist/mprpc/include/` 和 `dist/mprpc/lib/libmprpc.a`。
+
+### 5. 本地运行服务端
 
 开两个终端分别执行：
 
@@ -114,7 +128,7 @@ cmake --build build -j"$(nproc)"
   - `register rpc provider node`
   - `rpc provider start bind=127.0.0.1:...`
 
-### 5. 本地运行客户端测试
+### 6. 本地运行客户端测试
 
 ```bash
 ./build/bin/calluserservice -i config/local/client.conf
@@ -140,7 +154,7 @@ userid:2 name:li si
 userid:3 name:wang wu
 ```
 
-### 6. 停止依赖服务
+### 7. 停止依赖服务
 
 ```bash
 docker compose down -v --remove-orphans
@@ -215,6 +229,7 @@ config/local/client.conf
 docker compose up -d zookeeper
 cmake -S . -B build
 cmake --build build -j"$(nproc)"
+cmake --install build --prefix dist/mprpc
 ./build/bin/userservice -i config/local/userservice.conf
 ./build/bin/friendservice -i config/local/friendservice.conf
 ./build/bin/calluserservice -i config/local/client.conf
@@ -223,6 +238,9 @@ docker compose down -v --remove-orphans
 ```
 
 ## 日志怎么看
+
+RPC 框架内部日志使用 `RpcLogger` / `RpcLogLevel` 和 `RPC_LOG_INFO` / `RPC_LOG_ERROR`，避免和接入项目自己的 `Logger` / `LOG_INFO` 冲突。
+RPC 日志前缀会带 `[RPC]`，例如 `[RPC][INFO] ...`。
 
 本地运行时，终端里的输出一般分 3 类：
 
@@ -307,6 +325,10 @@ userid:3 name:wang wu
   - 停止 ZooKeeper 依赖
 - `compose.yaml`
   - 仅用于依赖服务编排
+- `build/`
+  - 本地构建产物目录，不纳入 git
+- `dist/`
+  - `cmake --install` 生成的本地交付产物目录，不纳入 git
 
 ## 测试方案
 
@@ -335,6 +357,18 @@ cmake --build build -j"$(nproc)"
 - `build/bin/calluserservice`
 - `build/bin/callfriendservice`
 - `build/lib/libmprpc.a`
+
+### 安装导出层
+
+```bash
+cmake --install build --prefix dist/mprpc
+```
+
+检查：
+
+- `dist/mprpc/include/logger.h`
+- `dist/mprpc/include/mprpcprovider.h`
+- `dist/mprpc/lib/libmprpc.a`
 
 ### 本地运行层
 

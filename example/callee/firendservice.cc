@@ -54,8 +54,8 @@ public:
 
 int main(int argc, char **argv) {
 
-  LOG_INFO("first log!");
-  LOG_ERROR("%s:%s:%d", __FILE__, __FUNCTION__, __LINE__);
+  RPC_LOG_INFO("first log!");
+  RPC_LOG_ERROR("%s:%s:%d", __FILE__, __FUNCTION__, __LINE__);
 
   // rpc框架初始化
   MprpcApplication::Init(argc, argv);

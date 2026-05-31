@@ -25,9 +25,9 @@ std::string LoadLogDir() {
 }
 } // namespace
 
-Logger::Logger() : m_loglevel(0) { StartConsumer(); }
+RpcLogger::RpcLogger() : m_loglevel(0) { StartConsumer(); }
 
-void Logger::StartConsumer() {
+void RpcLogger::StartConsumer() {
   std::thread consumer([this]() {
     FILE *pf = nullptr;
     int currentDay = -1;
@@ -76,32 +76,33 @@ void Logger::StartConsumer() {
   consumer.detach();
 }
 
-Logger &Logger::GetInstance() {
+RpcLogger &RpcLogger::GetInstance() {
   // Intentionally leak the singleton so process shutdown does not race with the
   // detached consumer thread destroying synchronization primitives.
-  static Logger *logger = new Logger();
+  static RpcLogger *logger = new RpcLogger();
   return *logger;
 }
 
-void Logger::SetLogLevel(LogLevel level) {
+void RpcLogger::SetLogLevel(RpcLogLevel level) {
   m_loglevel = static_cast<int>(level);
 }
 
-std::string Logger::BuildPrefix(int level) const {
+std::string RpcLogger::BuildPrefix(int level) const {
   time_t now = time(nullptr);
   tm *nowtm = localtime(&now);
   char buf[128] = {0};
   if (nowtm != nullptr) {
-    snprintf(buf, sizeof(buf), "[%s] %02d:%02d:%02d => ",
+    snprintf(buf, sizeof(buf), "[RPC][%s] %02d:%02d:%02d => ",
              (level == 0 ? "INFO" : "ERROR"), nowtm->tm_hour,
              nowtm->tm_min, nowtm->tm_sec);
   } else {
-    snprintf(buf, sizeof(buf), "[%s] => ", (level == 0 ? "INFO" : "ERROR"));
+    snprintf(buf, sizeof(buf), "[RPC][%s] => ",
+             (level == 0 ? "INFO" : "ERROR"));
   }
   return buf;
 }
 
-void Logger::Log(std::string msg, int level) {
+void RpcLogger::Log(std::string msg, int level) {
   msg.insert(0, BuildPrefix(level));
   msg += '\n';
   m_lockQueue.Push(msg);

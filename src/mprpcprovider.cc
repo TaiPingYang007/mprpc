@@ -104,13 +104,13 @@ void RpcProvider::NotifyService(google::protobuf::Service *service) {
   const google::protobuf::ServiceDescriptor *serviceDesc =
       service->GetDescriptor();
   const std::string serviceName = serviceDesc->name();
-  LOG_INFO("register service: %s", serviceName.c_str());
+  RPC_LOG_INFO("register service: %s", serviceName.c_str());
 
   for (int i = 0; i < serviceDesc->method_count(); ++i) {
     const google::protobuf::MethodDescriptor *methodDesc =
         serviceDesc->method(i);
     const std::string methodName = methodDesc->name();
-    LOG_INFO("register method: %s::%s", serviceName.c_str(),
+    RPC_LOG_INFO("register method: %s::%s", serviceName.c_str(),
              methodName.c_str());
     serviceInfo.m_methodMap.insert(std::make_pair(methodName, methodDesc));
   }
@@ -143,12 +143,12 @@ void RpcProvider::Run() {
   m_tcpServerPtr->setThreadNum(threadNum);
 
   if (!RegisterServiceToZookeeper(advertiseHost, port)) {
-    LOG_ERROR("register service to zookeeper failed! advertise=%s port=%u",
+    RPC_LOG_ERROR("register service to zookeeper failed! advertise=%s port=%u",
               advertiseHost.c_str(), port);
     return;
   }
 
-  LOG_INFO("rpc provider start bind=%s:%u advertise=%s:%u threads=%d",
+  RPC_LOG_INFO("rpc provider start bind=%s:%u advertise=%s:%u threads=%d",
            bindIp.c_str(), port, advertiseHost.c_str(), port, threadNum);
 
   m_tcpServerPtr->start();
@@ -189,7 +189,7 @@ bool RpcProvider::RegisterServiceToZookeeper(const std::string &advertiseHost,
         return false;
       }
 
-      LOG_INFO("register rpc provider node service=%s method=%s path=%s target=%s",
+      RPC_LOG_INFO("register rpc provider node service=%s method=%s path=%s target=%s",
                serviceIt->first.c_str(), methodIt->first.c_str(),
                createdPath.c_str(), hostData.c_str());
     }
@@ -224,7 +224,7 @@ void RpcProvider::onMessage(const muduo::net::TcpConnectionPtr &conn,
                                     headerSize);
   mprpc::RpcHeader rpcHeader;
   if (!rpcHeader.ParseFromString(rpcHeaderString)) {
-    LOG_ERROR("rpc header parse error");
+    RPC_LOG_ERROR("rpc header parse error");
     conn->shutdown();
     return;
   }
@@ -241,7 +241,7 @@ void RpcProvider::onMessage(const muduo::net::TcpConnectionPtr &conn,
   buffer->retrieve(kRpcHeaderSizeBytes + headerSize);
   const std::string argsString = buffer->retrieveAsString(argsSize);
 
-  LOG_INFO("rpc request received service=%s method=%s args_size=%u",
+  RPC_LOG_INFO("rpc request received service=%s method=%s args_size=%u",
            serviceName.c_str(), methodName.c_str(), argsSize);
   ExecuteRpcRequest(conn, serviceName, methodName, argsString);
 }
@@ -252,7 +252,7 @@ void RpcProvider::ExecuteRpcRequest(
   std::unordered_map<std::string, ServiceInfo>::const_iterator serviceIt =
       m_serviceInfoMap.find(serviceName);
   if (serviceIt == m_serviceInfoMap.end()) {
-    LOG_ERROR("rpc service not exist! service=%s", serviceName.c_str());
+    RPC_LOG_ERROR("rpc service not exist! service=%s", serviceName.c_str());
     return;
   }
 
@@ -260,7 +260,7 @@ void RpcProvider::ExecuteRpcRequest(
                      const google::protobuf::MethodDescriptor *>::const_iterator
       methodIt = serviceIt->second.m_methodMap.find(methodName);
   if (methodIt == serviceIt->second.m_methodMap.end()) {
-    LOG_ERROR("rpc method not exist! service=%s method=%s", serviceName.c_str(),
+    RPC_LOG_ERROR("rpc method not exist! service=%s method=%s", serviceName.c_str(),
               methodName.c_str());
     return;
   }
@@ -271,7 +271,7 @@ void RpcProvider::ExecuteRpcRequest(
   std::unique_ptr<RpcCallContext> callContext(new RpcCallContext());
   callContext->request.reset(service->GetRequestPrototype(method).New());
   if (!callContext->request->ParseFromString(argsString)) {
-    LOG_ERROR("request parse error! service=%s method=%s", serviceName.c_str(),
+    RPC_LOG_ERROR("request parse error! service=%s method=%s", serviceName.c_str(),
               methodName.c_str());
     return;
   }
@@ -296,7 +296,7 @@ void RpcProvider::SendRpcResponse(const muduo::net::TcpConnectionPtr &conn,
   std::unique_ptr<RpcCallContext> contextGuard(callContext);
 
   if (contextGuard->controller->Failed()) {
-    LOG_ERROR("rpc response controller error: %s",
+    RPC_LOG_ERROR("rpc response controller error: %s",
               contextGuard->controller->ErrorText().c_str());
   }
 
@@ -304,7 +304,7 @@ void RpcProvider::SendRpcResponse(const muduo::net::TcpConnectionPtr &conn,
   if (contextGuard->response->SerializeToString(&responseString)) {
     conn->send(responseString);
   } else {
-    LOG_ERROR("response serialize error!");
+    RPC_LOG_ERROR("response serialize error!");
   }
   conn->shutdown();
 }
