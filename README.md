@@ -92,10 +92,13 @@ rpc register response success:1
 
 ### 4.(可选)导出静态库供其他项目复用
 
+一步到位(构建 + 导出头文件和静态库到 `dist/mprpc/`):
+
 ```bash
-cmake --install build --prefix dist/mprpc
-# 头文件 → dist/mprpc/include/,静态库 → dist/mprpc/lib/libmprpc.a
+./scripts/pack.sh
 ```
+
+`pack.sh` 等价于「构建 + `cmake --install build --prefix dist/mprpc`」。导出后:头文件在 `dist/mprpc/include/`,静态库在 `dist/mprpc/lib/libmprpc.a`,其他项目(如 BridgeIM)据此接入。
 
 ## 🧪 测试
 
