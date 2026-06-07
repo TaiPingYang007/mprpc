@@ -1,381 +1,135 @@
-# mprpc
+# mprpc — 轻量级分布式 RPC 框架
 
-一个基于 `C++11 + Muduo + Protobuf + ZooKeeper` 的轻量级 RPC 框架练手项目。
+基于 **C++11 + Protobuf + Muduo + ZooKeeper** 实现的轻量级 RPC 框架:用 Protobuf 描述服务、Muduo 承载高并发网络、ZooKeeper 做服务注册与发现,并内置一套生产级的异步日志子系统。框架以静态库形式打包,可被其他后端项目直接复用。
 
-这份仓库现在采用 **模式 A：本地写代码 + 本地编译运行 C++ 程序 + Docker 只跑依赖服务**。
+> 技术栈:`C++11` · `Protocol Buffers` · `Muduo` · `ZooKeeper` · `CMake` · `Docker`
 
-也就是说：
+## ✨ 特性亮点
 
-- 代码在本地开发
-- C++ 程序在本地编译
-- `userservice`、`friendservice`、`calluserservice`、`callfriendservice` 在本地运行
-- Docker 只负责依赖服务，目前只有 `ZooKeeper`
+**RPC 核心**
+- 基于 Protobuf `Service / Stub` 的远程调用模型,业务侧像调用本地方法一样发起 RPC。
+- 自定义二进制帧协议 `[4 字节 headerSize][RpcHeader][args]`,`RpcHeader` 携带 service / method / args_size。
+- Muduo 多 Reactor 网络模型承载并发连接,I/O 线程数可配置。
 
-这比纯 Docker-only 更接近真实 C++ 后端团队的开发方式，也更适合本地调试和面试展示。
+**服务治理**
+- ZooKeeper 服务注册与发现:provider 启动时在 `/<namespace>/<service>/<method>/providers/` 下创建顺序临时节点,caller 运行时动态发现地址,支持多实例。
+- `MprpcController` 区分**框架层失败**(连接 / 序列化 / 网络)与**业务层失败**(错误码 / 错误信息)。
 
-## 当前项目依赖判断
+**生产级异步日志子系统(`RpcLogger`)— 本项目的工程重点**
+- **业务线程零阻塞**:日志走生产者 / 消费者模型,业务线程只做一次入队,慢 I/O(写盘、flush)交给独立消费线程。
+- **有界队列 + 丢最旧并计数**:洪峰下内存有界;被丢弃的日志数会被统计并以 `[RPC][WARN]` 行可视化,既不无声丢失,也绝不反压业务线程。
+- **优雅停机**:`停止标志 + 排空队列 + flush + fclose + join`,进程退出前把尾部日志全部落盘,不丢尾巴;生命周期由调用方显式控制,不依赖静态析构顺序。
+- **配置热路径优化**:消费线程通过 `原子版本号(epoch) + 互斥锁` 读取已锁定配置,每行仅一次无锁原子读,避免逐行查配置。
+- **配置驱动**:输出模式(stdout / 按天滚动文件)、目录、队列容量均可由 `环境变量 > 配置文件 > 内置默认` 三级覆盖。
+- **配套验收测试**:`不丢尾日志`、`有界丢弃` 两个可重复运行的验收用例。
 
-当前这个 `mprpc` 项目真实依赖的外部服务只有：
+**工程化**
+- CMake 构建,`-Wall -Wextra` 干净;静态库 `libmprpc.a` 可通过 `cmake --install` 导出头文件 + 库,供其他后端项目直接接入。
+- Docker 仅负责依赖服务(ZooKeeper)编排,代码本地编译 / 调试,贴近真实后端开发流程。
 
-- ZooKeeper
+## 🏗 架构概览
 
-当前 **没有** 使用：
+```
+Caller 进程                          ZooKeeper                     Provider 进程
+Stub → MprpcChannel ──查询 provider──►   注册中心   ◄──注册节点──── RpcProvider → Service 实现
+  │  序列化 + 组帧                          (仅服务发现)                   拆帧 + 分发 │
+  └────────── TCP: [headerSize][RpcHeader][args] ───────────────────────────────────┘
+                          ◄────────── TCP: [response bytes] ──────────────────────────
+```
 
-- MySQL
-- Redis
-- Nginx
-- Kafka
+- **Stub / MprpcChannel**(调用方):把本地调用序列化组帧、查 ZooKeeper 发现地址、TCP 收发。
+- **RpcProvider**(提供方):发布服务、收包拆帧、按 service / method 分发到业务实现、回包。
+- **ZooKeeper**:只做服务注册与发现,不转发业务请求。
+- **RpcLogger**:贯穿两端的异步日志子系统。
 
-所以 Docker Compose 只需要托管 ZooKeeper，不需要数据库初始化脚本或 Redis 配置。
+> 单次调用的完整时序(组帧、服务发现、拆包、分发、回包)见 [docs/rpc-call-flow-notes.md](docs/rpc-call-flow-notes.md)。
 
-## 快速开始
+## 🚀 构建与运行
 
-### 1. 宿主机安装一次性依赖
-
-在 Ubuntu / WSL 下先安装：
+### 0. 一次性依赖(Ubuntu / WSL)
 
 ```bash
 sudo apt update
-sudo apt install -y \
-  build-essential \
-  cmake \
-  pkg-config \
-  libprotobuf-dev \
-  protobuf-compiler \
-  libzookeeper-mt-dev
+sudo apt install -y build-essential cmake pkg-config \
+  libprotobuf-dev protobuf-compiler libzookeeper-mt-dev
 ```
 
-Muduo 采用**系统全局安装优先**的方式，推荐安装到 `/usr/local`。
+Muduo 推荐全局安装到 `/usr/local`(需能找到 `libmuduo_net` / `libmuduo_base` 及头文件)。
 
-你需要保证本机可以找到：
-
-- Muduo 头文件
-- `libmuduo_net`
-- `libmuduo_base`
-
-也就是说，当前本地开发模式假定 Muduo 已经全局装好。
-
-### 2. 启动依赖服务（ZooKeeper）
+### 1. 启动依赖服务(ZooKeeper)
 
 ```bash
-docker compose up -d zookeeper
-docker compose ps
+docker compose up -d zookeeper      # 或 ./scripts/deps-up.sh
 ```
 
-或者使用辅助脚本：
-
-```bash
-./scripts/deps-up.sh
-docker compose ps
-```
-
-预期：
-
-- `mprpc-zookeeper` 为 `Up`
-- 宿主机可通过 `127.0.0.1:2181` 访问 ZooKeeper
-
-### 3. 本地构建
+### 2. 构建
 
 ```bash
 cmake -S . -B build
 cmake --build build -j"$(nproc)"
 ```
 
-或者使用辅助脚本：
+产物:可执行文件在 `build/bin/`,静态库在 `build/lib/libmprpc.a`。
+
+### 3. 运行服务端 + 客户端
 
 ```bash
-./scripts/build-local.sh
-```
-
-预期：
-
-- 可执行文件输出到 `build/bin/`
-- 静态库输出到 `build/lib/libmprpc.a`
-- 不再把产物默认输出到项目根目录 `bin/`、`lib/`
-
-### 4. 导出静态库给外部项目
-
-```bash
-cmake --install build --prefix dist/mprpc
-```
-
-预期：
-
-- 头文件输出到 `dist/mprpc/include/`
-- 静态库输出到 `dist/mprpc/lib/libmprpc.a`
-- `dist/` 是本地交付产物目录，不纳入 git
-
-BridgeIM 或其他项目接入时，使用 `dist/mprpc/include/` 和 `dist/mprpc/lib/libmprpc.a`。
-
-### 5. 本地运行服务端
-
-开两个终端分别执行：
-
-```bash
+# 终端 A:启动服务端(监听 127.0.0.1:9000,并注册到 ZooKeeper)
 ./build/bin/userservice -i config/local/userservice.conf
-```
 
-```bash
-./build/bin/friendservice -i config/local/friendservice.conf
-```
-
-预期：
-
-- `userservice` 监听 `127.0.0.1:8000`
-- `friendservice` 监听 `127.0.0.1:8001`
-- 启动日志里出现：
-  - `zkclient start success`
-  - `register rpc provider node`
-  - `rpc provider start bind=127.0.0.1:...`
-
-### 6. 本地运行客户端测试
-
-```bash
+# 终端 B:发起 RPC 调用
 ./build/bin/calluserservice -i config/local/client.conf
 ```
 
-预期输出：
+预期输出:
 
 ```text
 rpc login response success：1
 rpc register response success:1
 ```
 
-```bash
-./build/bin/callfriendservice -i config/local/client.conf
-```
+(同理:`friendservice`(127.0.0.1:8001)配 `callfriendservice`。)
 
-预期输出：
-
-```text
-rpc GetFriendList success !
-userid:1 name:zhang san
-userid:2 name:li si
-userid:3 name:wang wu
-```
-
-### 7. 停止依赖服务
-
-```bash
-docker compose down -v --remove-orphans
-```
-
-或者使用辅助脚本：
-
-```bash
-./scripts/deps-down.sh
-```
-
-## 为什么模式 A 更适合本地调试
-
-这个项目现在的推荐方式不是 Docker-first，而是：
-
-- 本地写代码
-- 本地编译
-- 本地运行服务端和客户端
-- Docker 只负责依赖服务
-
-这样做的好处是：
-
-- 更容易接入 `gdb`、`lldb`、VS Code C++ 调试器
-- 不需要每次改代码都重新进容器
-- 更贴近真实团队里的 C++ 后端开发体验
-- 更适合你以后给面试官展示“本地如何调试 RPC 框架”
-
-## 配置文件
-
-当前本地运行的主入口是配置文件，而不是 Docker 环境变量。
-
-配置文件位于：
-
-```text
-config/local/userservice.conf
-config/local/friendservice.conf
-config/local/client.conf
-```
-
-### userservice.conf
-
-- `RPC_BIND_IP=127.0.0.1`
-- `RPC_ADVERTISE_HOST=127.0.0.1`
-- `RPC_PORT=8000`
-- `ZK_ENDPOINTS=127.0.0.1:2181`
-
-### friendservice.conf
-
-- `RPC_BIND_IP=127.0.0.1`
-- `RPC_ADVERTISE_HOST=127.0.0.1`
-- `RPC_PORT=8001`
-- `ZK_ENDPOINTS=127.0.0.1:2181`
-
-### client.conf
-
-- 只保留 ZooKeeper 地址和超时配置
-- 不需要服务监听地址
-
-当前框架仍然支持：
-
-```bash
--i <configfile>
-```
-
-并且这次它就是本地开发主路径。
-
-## 本地开发命令清单
-
-最短常用流程：
-
-```bash
-docker compose up -d zookeeper
-cmake -S . -B build
-cmake --build build -j"$(nproc)"
-cmake --install build --prefix dist/mprpc
-./build/bin/userservice -i config/local/userservice.conf
-./build/bin/friendservice -i config/local/friendservice.conf
-./build/bin/calluserservice -i config/local/client.conf
-./build/bin/callfriendservice -i config/local/client.conf
-docker compose down -v --remove-orphans
-```
-
-## 日志怎么看
-
-RPC 框架内部日志使用 `RpcLogger` / `RpcLogLevel` 和 `RPC_LOG_INFO` / `RPC_LOG_ERROR`，避免和接入项目自己的 `Logger` / `LOG_INFO` 冲突。
-RPC 日志前缀会带 `[RPC]`，例如 `[RPC][INFO] ...`。
-
-本地运行时，终端里的输出一般分 3 类：
-
-1. Docker Compose 输出
-
-例如：
-
-```text
-Container mprpc-zookeeper Running
-```
-
-这只是依赖服务状态。
-
-2. ZooKeeper C 客户端日志
-
-例如：
-
-```text
-ZOO_INFO@zookeeper_init_internal...
-```
-
-这部分是 ZooKeeper C 库自己的日志。
-
-3. 真正的业务验证结果
-
-例如：
-
-```text
-rpc login response success：1
-rpc register response success:1
-rpc GetFriendList success !
-userid:1 name:zhang san
-userid:2 name:li si
-userid:3 name:wang wu
-```
-
-如果你是为了验证项目是否跑通，最重要的就是这几行。
-
-## 多实例说明
-
-框架代码当前仍然支持多 provider 注册发现，ZooKeeper 节点结构是：
-
-```text
-/<namespace>/<service>/<method>/providers/provider-*
-```
-
-但在本地开发模式下，默认运行方式是：
-
-- 一个 `userservice`
-- 一个 `friendservice`
-
-这样更利于调试和理解。
-
-如果以后你想重新做多实例验证，可以额外起多个本地服务进程，分别使用不同端口配置。
-
-## 仓库中的 Docker 角色
-
-当前仓库里 Docker 的职责只有一个：
-
-- 运行 ZooKeeper
-
-它不再承担：
-
-- 编译应用
-- 运行服务端程序
-- 运行客户端程序
-- 运行冒烟测试主流程
-
-## 目录说明
-
-- `src/`
-  - RPC 框架核心实现
-- `example/`
-  - 示例服务和客户端
-- `config/local/`
-  - 本地运行配置
-- `scripts/build-local.sh`
-  - 本地构建脚本
-- `scripts/deps-up.sh`
-  - 启动 ZooKeeper 依赖
-- `scripts/deps-down.sh`
-  - 停止 ZooKeeper 依赖
-- `compose.yaml`
-  - 仅用于依赖服务编排
-- `build/`
-  - 本地构建产物目录，不纳入 git
-- `dist/`
-  - `cmake --install` 生成的本地交付产物目录，不纳入 git
-
-## 测试方案
-
-### 依赖层
-
-```bash
-docker compose up -d zookeeper
-docker compose ps
-```
-
-检查：
-
-- `mprpc-zookeeper` 为 `Up`
-
-### 本地构建层
-
-```bash
-cmake -S . -B build
-cmake --build build -j"$(nproc)"
-```
-
-检查：
-
-- `build/bin/userservice`
-- `build/bin/friendservice`
-- `build/bin/calluserservice`
-- `build/bin/callfriendservice`
-- `build/lib/libmprpc.a`
-
-### 安装导出层
+### 4.(可选)导出静态库供其他项目复用
 
 ```bash
 cmake --install build --prefix dist/mprpc
+# 头文件 → dist/mprpc/include/,静态库 → dist/mprpc/lib/libmprpc.a
 ```
 
-检查：
+## 🧪 测试
 
-- `dist/mprpc/include/logger.h`
-- `dist/mprpc/include/mprpcprovider.h`
-- `dist/mprpc/lib/libmprpc.a`
+```bash
+# 日志子系统验收测试(构建后)
+./build/test/logger/log_shutdown_test   # 连续写 N 条后立即关闭,文件里完整 N 条,不丢尾巴
+./build/test/logger/log_bounded_test    # 洪峰压满队列,内存有界、丢弃被计数
+```
 
-### 本地运行层
+端到端验证即上文「运行服务端 + 客户端」:看到 `rpc ... response success` 即表示调用链路打通。
 
-先启动本地服务端，再运行客户端。
+## 📂 目录结构
 
-检查：
+```
+src/            RPC 框架核心(provider / channel / controller / config / zookeeper / logger)
+src/include/    框架公开头文件
+example/        示例服务(userservice / friendservice)与客户端(call*)
+test/logger/    日志子系统验收测试
+config/local/   本地运行配置(-i <conf>)
+scripts/        构建与依赖编排脚本
+docs/           设计与调用链路笔记
+compose.yaml    依赖服务(ZooKeeper)编排
+```
 
-- `calluserservice` 返回成功
-- `callfriendservice` 返回成功
-- 服务端日志中出现 ZooKeeper 注册成功信息
+## ⚙️ 配置
+
+运行通过 `-i <configfile>` 指定配置;所有键均支持环境变量覆盖,优先级 `env > 配置文件 > 内置默认`:
+
+| 键 | 说明 |
+| --- | --- |
+| `RPC_BIND_IP` / `RPC_PORT` | 服务监听地址 |
+| `RPC_ADVERTISE_HOST` | 注册到 ZooKeeper 的对外地址 |
+| `ZK_ENDPOINTS` | ZooKeeper 地址 |
+| `RPC_IO_THREADS` | Muduo I/O 线程数 |
+| `MPRPC_LOG_MODE` | 日志输出:`stdout` / `file` |
+| `MPRPC_LOG_DIR` | 文件模式日志目录(按天滚动) |
+| `MPRPC_LOG_QUEUE_CAP` | 日志队列容量上限(满则丢最旧并计数) |
