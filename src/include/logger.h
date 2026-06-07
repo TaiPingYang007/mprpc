@@ -3,6 +3,7 @@
 #include <atomic>
 #include <cstddef>
 #include <cstdio>
+#include <ctime>
 #include <mutex>
 #include <string>
 #include <thread>
@@ -36,9 +37,12 @@ private:
   ~RpcLogger();
   void StartConsumer();
   std::string BuildPrefix(RpcLogLevel level) const;
+  bool IsShutdown() const;
+  static bool LocalTime(time_t now, tm &out);
 
   RpcLockQueue<std::string> m_lockQueue;
   std::thread m_consumer;
+  mutable std::mutex m_lifecycleMutex;
   bool m_shutdown;
 
   // —— 已 latch 的日志配置：Configure() 写、消费线程读 ——

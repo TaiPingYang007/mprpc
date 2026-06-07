@@ -59,6 +59,10 @@ RpcLogger::RpcLogger()
 RpcLogger::~RpcLogger() { Shutdown(); }
 
 void RpcLogger::Configure() {
+  if (IsShutdown()) {
+    return;
+  }
+
   // 在 MprpcApplication::Init() 之后调用：此刻 env/默认/配置文件都已就绪。
   // 一次性把配置 latch 进来，之后消费线程只读这些锁定值。
   const std::string mode = LoadLogMode();
@@ -106,15 +110,15 @@ void RpcLogger::StartConsumer() {
       }
 
       time_t now = time(nullptr);
-      tm *nowtm = localtime(&now);
-      if (nowtm == nullptr) {
+      tm nowtm = {};
+      if (!RpcLogger::LocalTime(now, nowtm)) {
         std::cerr << line;
         return;
       }
 
       mkdir(dir.c_str(), 0755);
 
-      if (pf == nullptr || nowtm->tm_mday != currentDay) {
+      if (pf == nullptr || nowtm.tm_mday != currentDay) {
         if (pf != nullptr) {
           fclose(pf);
           pf = nullptr;
@@ -122,15 +126,15 @@ void RpcLogger::StartConsumer() {
 
         char fileName[128] = {0};
         snprintf(fileName, sizeof(fileName), "%s/%d-%02d-%02d-log.txt",
-                 dir.c_str(), nowtm->tm_year + 1900, nowtm->tm_mon + 1,
-                 nowtm->tm_mday);
+                 dir.c_str(), nowtm.tm_year + 1900, nowtm.tm_mon + 1,
+                 nowtm.tm_mday);
         pf = fopen(fileName, "a+");
         if (pf == nullptr) {
           std::cerr << "open log file error: " << fileName << std::endl;
           return; // 降级：丢弃本行的文件写入，不退出进程
         }
 
-        currentDay = nowtm->tm_mday;
+        currentDay = nowtm.tm_mday;
       }
 
       fputs(line.c_str(), pf);
@@ -175,6 +179,7 @@ RpcLogger &RpcLogger::GetInstance() {
 }
 
 void RpcLogger::Shutdown() {
+  std::lock_guard<std::mutex> lock(m_lifecycleMutex);
   if (m_shutdown) {
     return; // 幂等：重复调用安全
   }
@@ -185,18 +190,27 @@ void RpcLogger::Shutdown() {
   }
 }
 
+bool RpcLogger::IsShutdown() const {
+  std::lock_guard<std::mutex> lock(m_lifecycleMutex);
+  return m_shutdown;
+}
+
+bool RpcLogger::LocalTime(time_t now, tm &out) {
+  return localtime_r(&now, &out) != nullptr;
+}
+
 std::size_t RpcLogger::DroppedCount() const {
   return m_lockQueue.DroppedCount();
 }
 
 std::string RpcLogger::BuildPrefix(RpcLogLevel level) const {
   time_t now = time(nullptr);
-  tm *nowtm = localtime(&now);
+  tm nowtm = {};
   char buf[128] = {0};
-  if (nowtm != nullptr) {
+  if (LocalTime(now, nowtm)) {
     snprintf(buf, sizeof(buf), "[RPC][%s] %02d:%02d:%02d => ",
-             (level == RpcLogLevel::INFO ? "INFO" : "ERROR"), nowtm->tm_hour,
-             nowtm->tm_min, nowtm->tm_sec);
+             (level == RpcLogLevel::INFO ? "INFO" : "ERROR"), nowtm.tm_hour,
+             nowtm.tm_min, nowtm.tm_sec);
   } else {
     snprintf(buf, sizeof(buf), "[RPC][%s] => ",
              (level == RpcLogLevel::INFO ? "INFO" : "ERROR"));
@@ -205,6 +219,9 @@ std::string RpcLogger::BuildPrefix(RpcLogLevel level) const {
 }
 
 void RpcLogger::Log(std::string msg, RpcLogLevel level) {
+  if (IsShutdown()) {
+    return;
+  }
   msg.insert(0, BuildPrefix(level));
   msg += '\n';
   m_lockQueue.Push(msg);

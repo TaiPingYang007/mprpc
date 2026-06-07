@@ -14,10 +14,13 @@
 namespace {
 std::string TodayLogPath(const std::string &dir) {
   time_t now = time(nullptr);
-  tm *t = localtime(&now);
+  tm t = {};
+  if (localtime_r(&now, &t) == nullptr) {
+    return dir + "/unknown-log.txt";
+  }
   char name[256] = {0};
   snprintf(name, sizeof(name), "%s/%d-%02d-%02d-log.txt", dir.c_str(),
-           t->tm_year + 1900, t->tm_mon + 1, t->tm_mday);
+           t.tm_year + 1900, t.tm_mon + 1, t.tm_mday);
   return name;
 }
 } // namespace
