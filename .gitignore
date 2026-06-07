@@ -14,6 +14,8 @@ Testing/
 *-log.txt
 logs/
 tmp/
+test_logs_shutdown/
+test_logs_bounded/
 
 # Local environment files
 .env

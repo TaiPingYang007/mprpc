@@ -67,5 +67,11 @@ int main(int argc, char **argv) {
   // 启动服务
   provider.Run();
 
+  // 注意：provider.Run() 内部是 muduo 事件循环死循环，正常运行下不会返回，
+  // 因此这里其实不可达。真正的服务端优雅退出应在信号处理（如 SIGINT/SIGTERM）
+  // 里先停事件循环、再调用 Shutdown()，本次范围不含信号处理。
+  // 保留这行用于标明日志的关闭接入点：排空队列、flush、fclose、join 消费线程。
+  RpcLogger::GetInstance().Shutdown();
+
   return 0;
 }

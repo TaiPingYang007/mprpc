@@ -23,6 +23,7 @@ const std::unordered_map<std::string, std::string> &DefaultConfig() {
       {"RPC_RECV_TIMEOUT_MS", "5000"},
       {"MPRPC_LOG_MODE", "stdout"},
       {"MPRPC_LOG_DIR", "logs"},
+      {"MPRPC_LOG_QUEUE_CAP", "10000"},
   };
   return defaults;
 }
@@ -43,6 +44,7 @@ const std::unordered_map<std::string, std::string> &LegacyKeyMap() {
       {"mprpczookeepernamespace", "MPRPC_ZK_NAMESPACE"},
       {"mprpclogmode", "MPRPC_LOG_MODE"},
       {"mprpclogdir", "MPRPC_LOG_DIR"},
+      {"mprpclogqueuecap", "MPRPC_LOG_QUEUE_CAP"},
   };
   return aliases;
 }

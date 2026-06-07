@@ -1,4 +1,5 @@
 #include "../user.pb.h"
+#include "logger.h"
 #include "mprpcapplication.h"
 #include "mprpcprovider.h"
 #include <iostream>
@@ -91,6 +92,11 @@ int main(int argc, char **argv) {
 
   // 启动一个rpc服务发布节点 Run以后，进入阻塞状态，等待远程的rpc调用请求
   provider.Run();
+
+  // 注意：provider.Run() 是 muduo 事件循环死循环，正常运行下不会返回，这里不可达。
+  // 服务端真正的优雅退出应放在信号处理里先停事件循环再调用 Shutdown()。
+  // 保留此行标明日志关闭接入点：排空队列、flush、fclose、join 消费线程。
+  RpcLogger::GetInstance().Shutdown();
 
   return 0;
 }

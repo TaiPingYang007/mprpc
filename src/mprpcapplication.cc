@@ -1,4 +1,5 @@
 #include "./include/mprpcapplication.h"
+#include "./include/logger.h"
 #include <cstdlib>
 #include <iostream>
 #include <string>
@@ -38,6 +39,10 @@ void MprpcApplication::Init(int argc, char **argv) {
   if (!configFile.empty()) {
     m_config.LoadConfigfile(configFile.c_str());
   }
+
+  // 配置（env/默认/配置文件）此刻已全部就绪，把日志配置一次性 latch 进 logger。
+  // 此后日志消费线程不再每行读配置，且配置文件里的设置也能正确生效。
+  RpcLogger::GetInstance().Configure();
 }
 
 MprpcApplication &MprpcApplication::GetInstance() {
