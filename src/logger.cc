@@ -48,7 +48,7 @@ std::size_t LoadQueueCapacity() {
 } // namespace
 
 RpcLogger::RpcLogger()
-    : m_loglevel(0), m_lockQueue(LoadQueueCapacity()), m_shutdown(false),
+    : m_lockQueue(LoadQueueCapacity()), m_shutdown(false),
       m_mode(LoadLogMode()), m_dir(LoadLogDir()), m_configEpoch(1) {
   // 构造发生在 MprpcApplication::Init() 之前（单例懒构造），此处只是
   // 用 env/默认值做一个“引导(bootstrap)”配置，保证 Init 之前的少量日志也有去处；
@@ -189,26 +189,22 @@ std::size_t RpcLogger::DroppedCount() const {
   return m_lockQueue.DroppedCount();
 }
 
-void RpcLogger::SetLogLevel(RpcLogLevel level) {
-  m_loglevel = static_cast<int>(level);
-}
-
-std::string RpcLogger::BuildPrefix(int level) const {
+std::string RpcLogger::BuildPrefix(RpcLogLevel level) const {
   time_t now = time(nullptr);
   tm *nowtm = localtime(&now);
   char buf[128] = {0};
   if (nowtm != nullptr) {
     snprintf(buf, sizeof(buf), "[RPC][%s] %02d:%02d:%02d => ",
-             (level == 0 ? "INFO" : "ERROR"), nowtm->tm_hour,
+             (level == RpcLogLevel::INFO ? "INFO" : "ERROR"), nowtm->tm_hour,
              nowtm->tm_min, nowtm->tm_sec);
   } else {
     snprintf(buf, sizeof(buf), "[RPC][%s] => ",
-             (level == 0 ? "INFO" : "ERROR"));
+             (level == RpcLogLevel::INFO ? "INFO" : "ERROR"));
   }
   return buf;
 }
 
-void RpcLogger::Log(std::string msg, int level) {
+void RpcLogger::Log(std::string msg, RpcLogLevel level) {
   msg.insert(0, BuildPrefix(level));
   msg += '\n';
   m_lockQueue.Push(msg);

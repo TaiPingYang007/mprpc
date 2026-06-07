@@ -16,8 +16,7 @@ class RpcLogger {
 public:
   static RpcLogger &GetInstance();
 
-  void SetLogLevel(RpcLogLevel level);
-  void Log(std::string msg, int level);
+  void Log(std::string msg, RpcLogLevel level);
 
   // 从当前 MprpcConfig 一次性锁定（latch）日志配置：输出模式 / 目录 / 队列容量。
   // 应在 MprpcApplication::Init() 之后调用（Init 内部已自动调用一次）。
@@ -36,9 +35,8 @@ private:
   RpcLogger();
   ~RpcLogger();
   void StartConsumer();
-  std::string BuildPrefix(int level) const;
+  std::string BuildPrefix(RpcLogLevel level) const;
 
-  int m_loglevel;
   RpcLockQueue<std::string> m_lockQueue;
   std::thread m_consumer;
   bool m_shutdown;
@@ -58,17 +56,15 @@ private:
 #define RPC_LOG_INFO(logmsgformat, ...)                                        \
   do {                                                                         \
     RpcLogger &logger = RpcLogger::GetInstance();                              \
-    logger.SetLogLevel(RpcLogLevel::INFO);                                     \
     char c[1024] = {0};                                                        \
     snprintf(c, 1024, logmsgformat, ##__VA_ARGS__);                            \
-    logger.Log(c, 0);                                                          \
+    logger.Log(c, RpcLogLevel::INFO);                                          \
   } while (0)
 
 #define RPC_LOG_ERROR(logmsgformat, ...)                                       \
   do {                                                                         \
     RpcLogger &logger = RpcLogger::GetInstance();                              \
-    logger.SetLogLevel(RpcLogLevel::ERROR);                                    \
     char c[1024] = {0};                                                        \
     snprintf(c, 1024, logmsgformat, ##__VA_ARGS__);                            \
-    logger.Log(c, 1);                                                          \
+    logger.Log(c, RpcLogLevel::ERROR);                                         \
   } while (0)
