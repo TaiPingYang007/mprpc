@@ -32,6 +32,11 @@ std::string LoadLogName() {
   if (logName.empty()) {
     logName = "mprpc";
   }
+  for (std::string::iterator it = logName.begin(); it != logName.end(); ++it) {
+    if (*it == '/' || *it == '\\') {
+      *it = '_';
+    }
+  }
   return logName;
 }
 

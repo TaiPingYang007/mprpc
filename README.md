@@ -100,15 +100,13 @@ rpc register response success:1
 
 `pack.sh` 等价于「构建 + `cmake --install build --prefix dist/mprpc`」。导出后:头文件在 `dist/mprpc/include/`,静态库在 `dist/mprpc/lib/libmprpc.a`,其他项目(如 BridgeIM)据此接入。
 
-## 🧪 测试
-
-```bash
-# 日志子系统验收测试(构建后)
-./build/test/logger/log_shutdown_test   # 连续写 N 条后立即关闭,文件里完整 N 条,不丢尾巴
-./build/test/logger/log_bounded_test    # 洪峰压满队列,内存有界、丢弃被计数
-```
+## 🧪 验证
 
 端到端验证即上文「运行服务端 + 客户端」:看到 `rpc ... response success` 即表示调用链路打通。
+
+```bash
+cmake --build build --parallel
+```
 
 ## 📂 目录结构
 
@@ -116,7 +114,6 @@ rpc register response success:1
 src/            RPC 框架核心(provider / channel / controller / config / zookeeper / logger)
 src/include/    框架公开头文件
 example/        示例服务(userservice / friendservice)与客户端(call*)
-test/logger/    日志子系统验收测试
 config/local/   本地运行配置(-i <conf>)
 scripts/        构建与依赖编排脚本
 docs/           设计与调用链路笔记
@@ -135,7 +132,7 @@ compose.yaml    依赖服务(ZooKeeper)编排
 | `RPC_IO_THREADS` | Muduo I/O 线程数 |
 | `MPRPC_LOG_MODE` | 日志输出:`stdout` / `file` |
 | `MPRPC_LOG_DIR` | 文件模式日志目录(按天滚动) |
-| `MPRPC_LOG_NAME` | file 模式下日志文件名中的服务标识，默认 `mprpc`；建议使用不含路径分隔符的文件名 stem |
+| `MPRPC_LOG_NAME` | file 模式下日志文件名中的服务标识，默认 `mprpc`；路径分隔符 `/` 和 `\\` 会被归一化为 `_` |
 | `MPRPC_LOG_QUEUE_CAP` | 日志队列容量上限(满则丢最旧并计数) |
 
 file 模式下日志文件格式为：`<MPRPC_LOG_DIR>/<YYYY-MM-DD>-<MPRPC_LOG_NAME>.log`。例如 `MPRPC_LOG_DIR=logs`、`MPRPC_LOG_NAME=friend_service-rpc` 会写入 `logs/2026-06-08-friend_service-rpc.log`；未配置时默认写入 `logs/2026-06-08-mprpc.log`。
