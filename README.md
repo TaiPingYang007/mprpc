@@ -62,7 +62,17 @@ Muduo 推荐全局安装到 `/usr/local`(需能找到 `libmuduo_net` / `libmuduo
 docker compose up -d zookeeper      # 或 ./scripts/deps-up.sh
 ```
 
-### 2. 构建
+### 2.(可选)准备环境变量模板
+
+仓库提供 [.env.example](.env.example) 作为 GitHub 提交用的安全模板。需要用环境变量覆盖配置时，可复制为本地 `.env` 后按机器环境调整：
+
+```bash
+cp .env.example .env
+```
+
+框架读取的是进程环境变量，不会自动解析 `.env` 文件；如需使用 `.env`，请在启动进程前用 shell 或外部工具加载。
+
+### 3. 构建
 
 ```bash
 cmake -S . -B build
@@ -71,7 +81,7 @@ cmake --build build -j"$(nproc)"
 
 产物:可执行文件在 `build/bin/`,静态库在 `build/lib/libmprpc.a`。
 
-### 3. 运行服务端 + 客户端
+### 4. 运行服务端 + 客户端
 
 ```bash
 # 终端 A:启动服务端(监听 127.0.0.1:9000,并注册到 ZooKeeper)
@@ -90,7 +100,7 @@ rpc register response success:1
 
 (同理:`friendservice`(127.0.0.1:8001)配 `callfriendservice`。)
 
-### 4.(可选)导出静态库供其他项目复用
+### 5.(可选)导出静态库供其他项目复用
 
 一步到位(构建 + 导出头文件和静态库到 `dist/mprpc/`):
 

@@ -16,6 +16,7 @@ test_logs_bounded/
 # Local environment
 .env
 .env.*
+!.env.example
 
 # Editor / tooling caches
 .vscode/
