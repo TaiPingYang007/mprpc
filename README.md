@@ -20,7 +20,7 @@
 - **有界队列 + 丢最旧并计数**:洪峰下内存有界;被丢弃的日志数会被统计并以 `[RPC][WARN]` 行可视化,既不无声丢失,也绝不反压业务线程。
 - **优雅停机**:`停止标志 + 排空队列 + flush + fclose + join`,进程退出前把尾部日志全部落盘,不丢尾巴;生命周期由调用方显式控制,不依赖静态析构顺序。
 - **配置热路径优化**:消费线程通过 `原子版本号(epoch) + 互斥锁` 读取已锁定配置,每行仅一次无锁原子读,避免逐行查配置。
-- **配置驱动**:输出模式(stdout / 按天滚动文件)、目录、队列容量均可由 `环境变量 > 配置文件 > 内置默认` 三级覆盖。
+- **配置驱动**:输出模式(stdout / 按天滚动文件)、目录、日志文件名、队列容量均可由 `环境变量 > 配置文件 > 内置默认` 三级覆盖。
 - **配套验收测试**:`不丢尾日志`、`有界丢弃` 两个可重复运行的验收用例。
 
 **工程化**
@@ -135,4 +135,7 @@ compose.yaml    依赖服务(ZooKeeper)编排
 | `RPC_IO_THREADS` | Muduo I/O 线程数 |
 | `MPRPC_LOG_MODE` | 日志输出:`stdout` / `file` |
 | `MPRPC_LOG_DIR` | 文件模式日志目录(按天滚动) |
+| `MPRPC_LOG_NAME` | file 模式下日志文件名中的服务标识，默认 `mprpc`；建议使用不含路径分隔符的文件名 stem |
 | `MPRPC_LOG_QUEUE_CAP` | 日志队列容量上限(满则丢最旧并计数) |
+
+file 模式下日志文件格式为：`<MPRPC_LOG_DIR>/<YYYY-MM-DD>-<MPRPC_LOG_NAME>.log`。例如 `MPRPC_LOG_DIR=logs`、`MPRPC_LOG_NAME=friend_service-rpc` 会写入 `logs/2026-06-08-friend_service-rpc.log`；未配置时默认写入 `logs/2026-06-08-mprpc.log`。

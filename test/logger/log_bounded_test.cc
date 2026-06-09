@@ -13,6 +13,7 @@ int main() {
   setenv("MPRPC_LOG_QUEUE_CAP", "16", 1);
   setenv("MPRPC_LOG_MODE", "file", 1);
   setenv("MPRPC_LOG_DIR", "test_logs_bounded", 1);
+  setenv("MPRPC_LOG_NAME", "bounded-rpc", 1);
 
   // D 模式：显式 latch 配置，把队列容量锁定为 16（SetCapacity）。
   RpcLogger::GetInstance().Configure();

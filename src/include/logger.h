@@ -19,7 +19,7 @@ public:
 
   void Log(std::string msg, RpcLogLevel level);
 
-  // 从当前 MprpcConfig 一次性锁定（latch）日志配置：输出模式 / 目录 / 队列容量。
+  // 从当前 MprpcConfig 一次性锁定（latch）日志配置：输出模式 / 目录 / 日志名 / 队列容量。
   // 应在 MprpcApplication::Init() 之后调用（Init 内部已自动调用一次）。
   // latch 之后，消费线程不再每行读配置——时序确定、热路径零配置开销。
   // 可重复调用，最后一次生效。
@@ -51,6 +51,7 @@ private:
   mutable std::mutex m_configMutex;
   std::string m_mode; // 受 m_configMutex 保护
   std::string m_dir;  // 受 m_configMutex 保护
+  std::string m_name; // 受 m_configMutex 保护
   std::atomic<unsigned long> m_configEpoch;
 
   RpcLogger(const RpcLogger &) = delete;

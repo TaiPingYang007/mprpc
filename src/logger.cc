@@ -27,6 +27,14 @@ std::string LoadLogDir() {
   return logDir;
 }
 
+std::string LoadLogName() {
+  std::string logName = MprpcApplication::GetConfig().Load("MPRPC_LOG_NAME");
+  if (logName.empty()) {
+    logName = "mprpc";
+  }
+  return logName;
+}
+
 // 队列容量上限，配置键 MPRPC_LOG_QUEUE_CAP（默认 10000，0 表示不设上限）。
 std::size_t LoadQueueCapacity() {
   const std::string raw =
@@ -49,7 +57,8 @@ std::size_t LoadQueueCapacity() {
 
 RpcLogger::RpcLogger()
     : m_lockQueue(LoadQueueCapacity()), m_shutdown(false),
-      m_mode(LoadLogMode()), m_dir(LoadLogDir()), m_configEpoch(1) {
+      m_mode(LoadLogMode()), m_dir(LoadLogDir()), m_name(LoadLogName()),
+      m_configEpoch(1) {
   // 构造发生在 MprpcApplication::Init() 之前（单例懒构造），此处只是
   // 用 env/默认值做一个“引导(bootstrap)”配置，保证 Init 之前的少量日志也有去处；
   // 真正的配置在 Init 之后由 Configure() 锁定。
@@ -67,11 +76,13 @@ void RpcLogger::Configure() {
   // 一次性把配置 latch 进来，之后消费线程只读这些锁定值。
   const std::string mode = LoadLogMode();
   const std::string dir = LoadLogDir();
+  const std::string name = LoadLogName();
   const std::size_t cap = LoadQueueCapacity();
   {
     std::lock_guard<std::mutex> lock(m_configMutex);
     m_mode = mode;
     m_dir = dir;
+    m_name = name;
   }
   m_lockQueue.SetCapacity(cap);
   // 自增版本号（release）：消费线程下一行用 acquire 读到变更后重读一次配置。
@@ -81,12 +92,13 @@ void RpcLogger::Configure() {
 void RpcLogger::StartConsumer() {
   m_consumer = std::thread([this]() {
     FILE *pf = nullptr;
-    int currentDay = -1;
+    std::string currentFilePath;
 
     // 消费线程本地缓存的配置 + 已知的配置版本号。localEpoch 初值故意与构造时
     // 的 m_configEpoch(1) 不同，保证首轮必定从 latch 中加载一次。
     std::string mode;
     std::string dir;
+    std::string name;
     unsigned long localEpoch = 0;
 
     // 仅当 Configure() 改过配置（epoch 变化）时，才加锁重读一次；
@@ -97,11 +109,12 @@ void RpcLogger::StartConsumer() {
         std::lock_guard<std::mutex> lock(m_configMutex);
         mode = m_mode;
         dir = m_dir;
+        name = m_name;
         localEpoch = epoch;
       }
     };
 
-    // 把“写出一行”的逻辑收拢在消费线程内，pf / currentDay 也只归它所有。
+    // 把“写出一行”的逻辑收拢在消费线程内，pf / currentFilePath 也只归它所有。
     // fopen 失败时降级（A2：跳过本行文件写入，绝不退出进程）。
     auto writeLine = [&](const std::string &line) {
       if (mode == "stdout") {
@@ -118,23 +131,31 @@ void RpcLogger::StartConsumer() {
 
       mkdir(dir.c_str(), 0755);
 
-      if (pf == nullptr || nowtm.tm_mday != currentDay) {
+      char desiredPath[512] = {0};
+      const int written = snprintf(desiredPath, sizeof(desiredPath),
+                                   "%s/%d-%02d-%02d-%s.log", dir.c_str(),
+                                   nowtm.tm_year + 1900, nowtm.tm_mon + 1,
+                                   nowtm.tm_mday, name.c_str());
+      if (written < 0 || static_cast<std::size_t>(written) >= sizeof(desiredPath)) {
+        std::cerr << "log file path too long, skip file write" << std::endl;
+        return;
+      }
+
+      if (pf == nullptr || currentFilePath != desiredPath) {
         if (pf != nullptr) {
+          fflush(pf);
           fclose(pf);
           pf = nullptr;
         }
 
-        char fileName[128] = {0};
-        snprintf(fileName, sizeof(fileName), "%s/%d-%02d-%02d-log.txt",
-                 dir.c_str(), nowtm.tm_year + 1900, nowtm.tm_mon + 1,
-                 nowtm.tm_mday);
-        pf = fopen(fileName, "a+");
+        pf = fopen(desiredPath, "a+");
         if (pf == nullptr) {
-          std::cerr << "open log file error: " << fileName << std::endl;
+          std::cerr << "open log file error: " << desiredPath << std::endl;
+          currentFilePath.clear();
           return; // 降级：丢弃本行的文件写入，不退出进程
         }
 
-        currentDay = nowtm.tm_mday;
+        currentFilePath = desiredPath;
       }
 
       fputs(line.c_str(), pf);
