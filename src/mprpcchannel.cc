@@ -16,7 +16,6 @@
 #include <mutex>
 #include <netdb.h>
 #include <poll.h>
-#include <sstream>
 #include <string>
 #include <sys/socket.h>
 #include <sys/time.h>
@@ -220,33 +219,6 @@ std::string BuildMethodPath(const std::string &serviceName,
 std::string BuildProviderPath(const std::string &serviceName,
                               const std::string &methodName) {
   return BuildMethodPath(serviceName, methodName) + "/providers";
-}
-
-std::vector<std::string> BuildPathPrefixes(const std::string &path) {
-  std::vector<std::string> prefixes;
-  std::stringstream ss(path);
-  std::string segment;
-  std::string current;
-  while (std::getline(ss, segment, '/')) {
-    if (segment.empty()) {
-      continue;
-    }
-    current += "/";
-    current += segment;
-    prefixes.push_back(current);
-  }
-  return prefixes;
-}
-
-bool EnsurePersistentPath(ZkClient *client, const std::string &path) {
-  const std::vector<std::string> prefixes = BuildPathPrefixes(path);
-  for (std::vector<std::string>::const_iterator it = prefixes.begin();
-       it != prefixes.end(); ++it) {
-    if (!client->Create(it->c_str(), nullptr, 0, 0)) {
-      return false;
-    }
-  }
-  return true;
 }
 
 std::string SelectProviderHostData(ZkClient *client, const std::string &serviceName,

@@ -27,24 +27,6 @@ int LoadTimeoutMs(const std::string &key, int defaultValue) {
   }
 }
 
-std::string NormalizeNamespace() {
-  std::string ns = MprpcApplication::GetConfig().Load("MPRPC_ZK_NAMESPACE");
-  if (ns.empty()) {
-    ns = "mprpc";
-  }
-
-  while (!ns.empty() && ns.front() == '/') {
-    ns.erase(ns.begin());
-  }
-  while (!ns.empty() && ns.back() == '/') {
-    ns.pop_back();
-  }
-  if (ns.empty()) {
-    ns = "mprpc";
-  }
-  return ns;
-}
-
 timespec BuildAbsoluteTimeout(int timeoutMs) {
   timespec absTimeout;
   clock_gettime(CLOCK_REALTIME, &absTimeout);

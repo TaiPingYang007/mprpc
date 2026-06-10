@@ -28,4 +28,6 @@ void MprpcController::StartCancel() {}
 bool MprpcController::IsCanceled() const { return false; }
 
 // 7. 注册取消回调（目前未实现）
-void MprpcController::NotifyOnCancel(google::protobuf::Closure *callback) {}
+void MprpcController::NotifyOnCancel(google::protobuf::Closure *callback) {
+  (void)callback;
+}

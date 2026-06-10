@@ -13,6 +13,14 @@ set(MPRPC_SOURCES
 # 将框架编译为静态库 mprpc
 add_library(mprpc STATIC ${MPRPC_SOURCES})
 
+# 框架自身代码开启 -Wall -Wextra；用 PRIVATE 避免把告警标志传染给下游使用者。
+# 生成代码（rpcherder.pb.cc）的告警不强求，这里只约束我们手写的源文件。
+target_compile_options(mprpc
+    PRIVATE
+        -Wall
+        -Wextra
+)
+
 target_include_directories(mprpc
     PUBLIC
         ${PROJECT_SOURCE_DIR}/src/include
